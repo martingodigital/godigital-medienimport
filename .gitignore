@@ -1,0 +1,18 @@
+# Medien gehoeren nicht ins Repository: die Inbox ist ein Durchlauf,
+# die Mediathek ist das Ergebnis und kann sehr gross werden.
+inbox/*
+!inbox/.gitkeep
+mediathek/
+
+# Laufprotokolle entstehen bei jedem echten Import neu.
+# Die bebilderte Anwenderanleitung im selben Ordner bleibt versioniert.
+protokolle/protokoll_*.md
+
+# Sicherungskopien: einstellungen.json.bak legt die Weboberflaeche an,
+# Importiere-Medien.ps1.bak-<zeitstempel> die Handarbeit vor groesseren Eingriffen.
+*.bak
+*.bak-*
+
+# Windows-Beifang
+Thumbs.db
+desktop.ini

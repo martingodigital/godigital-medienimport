@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GoDigital Medienimport</title>
+<style>
+  /* Farbwelt: Fotopapier als Grund, Tinte als Text, Archivstempel-Blau als
+     Akzent. Semantische Farben (gut/warn/fehler) sind bewusst davon getrennt.
+     Schriften kommen aus dem System: die Seite laeuft lokal und muss auch
+     ohne Internetverbindung vollstaendig aussehen. */
+  :root {
+    --papier:   #faf8f5;
+    --flaeche:  #ffffff;
+    --senke:    #f3f0eb;
+    --tinte:    #1a1f2b;
+    --leise:    #6a7180;
+    --linie:    #e4ded6;
+    --linie-st: #d3ccc1;
+    --stempel:  #2f4b8f;
+    --stempel-grund: #ecf0fa;
+    --stempel-text:  #ffffff;
+    --gut:      #2e6b4f;
+    --gut-grund:#e9f2ec;
+    --warn:     #8a5d00;
+    --warn-grund:#fbf3e2;
+    --fehler:   #9e2f28;
+    --fehler-grund:#fbeceb;
+    --schatten: 0 1px 2px rgba(26,31,43,.06), 0 4px 12px rgba(26,31,43,.04);
+
+    --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", Consolas, ui-monospace, "SF Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --papier:   #15171c;
+      --flaeche:  #1c1f27;
+      --senke:    #23262f;
+      --tinte:    #e8e6e2;
+      --leise:    #949bab;
+      --linie:    #2e323c;
+      --linie-st: #3c414d;
+      --stempel:  #8aa9e8;
+      --stempel-grund: #1e2740;
+      --stempel-text:  #10131a;
+      --gut:      #62ac88;
+      --gut-grund:#182a22;
+      --warn:     #d5a257;
+      --warn-grund:#2c2417;
+      --fehler:   #e28b83;
+      --fehler-grund:#2e1d1c;
+      --schatten: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --papier:   #15171c;
+    --flaeche:  #1c1f27;
+    --senke:    #23262f;
+    --tinte:    #e8e6e2;
+    --leise:    #949bab;
+    --linie:    #2e323c;
+    --linie-st: #3c414d;
+    --stempel:  #8aa9e8;
+    --stempel-grund: #1e2740;
+    --stempel-text:  #10131a;
+    --gut:      #62ac88;
+    --gut-grund:#182a22;
+    --warn:     #d5a257;
+    --warn-grund:#2c2417;
+    --fehler:   #e28b83;
+    --fehler-grund:#2e1d1c;
+    --schatten: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding-block: 28px 56px;
+    padding-inline: 16px;
+    background: var(--papier);
+    color: var(--tinte);
+    font: 15px/1.55 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .huelle { max-width: 1000px; margin: 0 auto; }
+
+  /* --- Kopf --- */
+  .kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-bottom: 4px; }
+  h1 {
+    font-size: 25px; font-weight: 650; margin: 0; letter-spacing: -.015em;
+    text-wrap: balance;
+  }
+  .kopf .ort { font: 12px/1.4 var(--mono); color: var(--leise); word-break: break-all; }
+
+  /* --- Kennzahlen --- */
+  .lage {
+    display: flex; flex-wrap: wrap; gap: 0;
+    border: 1px solid var(--linie); border-radius: 10px;
+    background: var(--flaeche); box-shadow: var(--schatten);
+    margin: 18px 0 22px; overflow: hidden;
+  }
+  .lage > div {
+    flex: 1 1 150px; padding: 13px 18px;
+    border-left: 1px solid var(--linie);
+  }
+  .lage > div:first-child { border-left: 0; }
+  .lage .zahl {
+    display: block; font: 600 23px/1.15 var(--sans);
+    font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  }
+  .lage .was {
+    display: block; margin-top: 2px;
+    font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--leise);
+  }
+  .lage .zahl.still { color: var(--leise); font-weight: 500; }
+
+  /* --- Reiter --- */
+  .reiter { display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: -1px; position: relative; z-index: 1; }
+  .reiter button {
+    background: transparent; border: 1px solid transparent; border-bottom: 0;
+    border-radius: 8px 8px 0 0; padding: 9px 17px;
+    font: 500 14px/1 var(--sans); color: var(--leise); cursor: pointer;
+  }
+  .reiter button:hover { color: var(--tinte); }
+  .reiter button[aria-selected="true"] {
+    background: var(--flaeche); border-color: var(--linie);
+    color: var(--tinte); font-weight: 650;
+  }
+
+  /* --- Blattflaeche --- */
+  .blatt {
+    background: var(--flaeche); border: 1px solid var(--linie);
+    border-radius: 0 10px 10px 10px; box-shadow: var(--schatten);
+    padding: 24px;
+  }
+
+  .gruppe { padding-block: 20px; border-top: 1px solid var(--linie); }
+  .gruppe:first-of-type { padding-top: 0; border-top: 0; }
+  .gruppe > h2 {
+    font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--leise); margin: 0 0 14px;
+  }
+  .gruppe > .erlaeuterung { margin: -8px 0 14px; font-size: 13px; color: var(--leise); max-width: 62ch; }
+
+  .felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px 18px; }
+  .felder.eins { grid-template-columns: 1fr; }
+  label.feld { display: block; }
+  label.feld > .name { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 500; }
+  label.feld > .tipp { display: block; margin-top: 5px; font-size: 12px; color: var(--leise); }
+  input[type=text], select {
+    width: 100%; padding: 8px 10px;
+    border: 1px solid var(--linie-st); border-radius: 6px;
+    background: var(--papier); color: var(--tinte);
+    font: 14px/1.4 var(--sans);
+  }
+  input.pfad { font: 13px/1.4 var(--mono); }
+  input:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--stempel); outline-offset: 2px;
+  }
+  input:disabled { background: var(--senke); color: var(--leise); cursor: not-allowed; }
+
+  .schalter { display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; }
+  .schalter input { margin: 2px 0 0; width: 15px; height: 15px; accent-color: var(--stempel); }
+  .schalter label { font-size: 14px; }
+  .schalter .tipp { display: block; margin-top: 2px; font-size: 12px; color: var(--leise); max-width: 60ch; }
+
+  .typen { display: flex; flex-wrap: wrap; gap: 7px; }
+  .typen label {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 8px; border: 1px solid var(--linie-st); border-radius: 999px;
+    font: 13px/1 var(--mono); cursor: pointer; user-select: none;
+  }
+  .typen label:has(input:checked) {
+    background: var(--stempel-grund); border-color: var(--stempel); color: var(--stempel);
+  }
+  .typen input { margin: 0; accent-color: var(--stempel); }
+
+  /* --- Knoepfe --- */
+  .knopfreihe {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--linie);
+  }
+  button.tat, button.zweit {
+    border-radius: 7px; padding: 9px 18px; font: 600 14px/1.2 var(--sans); cursor: pointer;
+  }
+  button.tat { background: var(--stempel); color: var(--stempel-text); border: 1px solid var(--stempel); }
+  button.zweit { background: var(--flaeche); color: var(--tinte); border: 1px solid var(--linie-st); font-weight: 500; }
+  button.zweit:hover:not(:disabled) { border-color: var(--leise); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .laufstatus { font-size: 13px; color: var(--leise); }
+
+  /* --- Meldungen --- */
+  .hinweis {
+    border-radius: 7px; padding: 11px 14px; margin-top: 16px; font-size: 14px;
+    border-left: 3px solid transparent;
+  }
+  .hinweis.warn   { background: var(--warn-grund);   color: var(--warn);   border-left-color: var(--warn); }
+  .hinweis.fehler { background: var(--fehler-grund); color: var(--fehler); border-left-color: var(--fehler); }
+  .hinweis.gut    { background: var(--gut-grund);    color: var(--gut);    border-left-color: var(--gut); }
+
+  /* --- Tabellen --- */
+  .ergebnis { margin-top: 22px; }
+  .ergebnis > .ueberschrift {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    font-size: 14px; margin-bottom: 10px;
+  }
+  .ergebnis > .ueberschrift b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .tabellenrahmen {
+    overflow-x: auto; border: 1px solid var(--linie); border-radius: 8px; background: var(--flaeche);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead th {
+    text-align: left; padding: 8px 12px; background: var(--senke);
+    font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--leise);
+    font-weight: 600; white-space: nowrap; border-bottom: 1px solid var(--linie);
+  }
+  tbody td { padding: 7px 12px; border-top: 1px solid var(--linie); vertical-align: top; }
+  tbody tr:first-child td { border-top: 0; }
+  td.pfad { font: 12px/1.45 var(--mono); word-break: break-all; }
+  td.pfeil { color: var(--leise); text-align: center; width: 1%; padding-inline: 4px; }
+
+  .marke {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    font: 600 11px/1.7 var(--sans); letter-spacing: .04em;
+  }
+  .marke.OK       { background: var(--gut-grund);    color: var(--gut); }
+  .marke.SKIP     { background: var(--warn-grund);   color: var(--warn); }
+  .marke.FEHLER,
+  .marke.ABBRUCH  { background: var(--fehler-grund); color: var(--fehler); }
+  .marke.HINWEIS  { background: var(--senke);        color: var(--leise); }
+
+  /* --- Protokolle --- */
+  .protokollliste { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .protokollliste button {
+    background: var(--flaeche); border: 1px solid var(--linie-st); border-radius: 6px;
+    padding: 6px 11px; font: 13px/1.2 var(--mono); color: var(--tinte); cursor: pointer;
+  }
+  .protokollliste button[aria-pressed="true"] {
+    background: var(--stempel-grund); border-color: var(--stempel); color: var(--stempel); font-weight: 600;
+  }
+  pre {
+    margin: 0; background: var(--senke); border: 1px solid var(--linie); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto;
+    font: 12px/1.6 var(--mono); white-space: pre-wrap; word-break: break-word;
+  }
+
+  .leer { color: var(--leise); font-size: 14px; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="huelle">
+
+  <div class="kopf">
+    <h1>GoDigital Medienimport</h1>
+    <span class="ort" id="ortMediathek">Mediathek wird ermittelt …</span>
+  </div>
+
+  <div class="lage" id="lage">
+    <div><span class="zahl still">–</span><span class="was">In der Inbox</span></div>
+    <div><span class="zahl still">–</span><span class="was">Ereignisordner</span></div>
+    <div><span class="zahl still">–</span><span class="was">In der Mediathek</span></div>
+  </div>
+  <div id="lagehinweis"></div>
+
+  <div class="reiter" role="tablist">
+    <button role="tab" aria-selected="true"  data-blatt="import" id="reiter-import">Import</button>
+    <button role="tab" aria-selected="false" data-blatt="einstellungen" id="reiter-einstellungen">Einstellungen</button>
+    <button role="tab" aria-selected="false" data-blatt="protokolle" id="reiter-protokolle">Protokolle</button>
+  </div>
+
+  <!-- ============ Import ============ -->
+  <section class="blatt" id="blatt-import">
+    <div class="gruppe">
+      <h2>Nur für diesen Lauf</h2>
+      <p class="erlaeuterung">Diese Angaben gelten einmalig und ändern nichts an den gespeicherten Einstellungen.</p>
+      <div class="felder">
+        <label class="feld">
+          <span class="name">Ereignisname</span>
+          <input type="text" id="ereignis" placeholder="2026-09_Urlaub Italien">
+          <span class="tipp">Leer lassen, um nach Datum einzusortieren.</span>
+        </label>
+        <label class="feld">
+          <span class="name">Nur Dateien, die so anfangen</span>
+          <input type="text" id="praefix" placeholder="DJI_">
+          <span class="tipp">Leer lassen für alle Dateien.</span>
+        </label>
+        <label class="feld">
+          <span class="name">Ordnerschema</span>
+          <select id="gruppierung">
+            <option value="JahrMonat">2026 \ 2026-09 \ Datei</option>
+            <option value="Jahr">2026 \ Datei</option>
+            <option value="Tag">2026-09-10 \ Datei</option>
+            <option value="Keine">Alles direkt in die Mediathek</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="schalter">
+        <input type="checkbox" id="ohneUnterordner">
+        <label for="ohneUnterordner">Unterordner der Inbox nach Datum einsortieren
+          <span class="tipp">Sonst wird jeder Unterordner zu einem Ereignis.</span>
+        </label>
+      </div>
+      <div class="schalter">
+        <input type="checkbox" id="alleDateien">
+        <label for="alleDateien">Endungsfilter abschalten
+          <span class="tipp">Zieht dann auch Textdateien und XMP-Beidateien in die Mediathek.</span>
+        </label>
+      </div>
+      <div class="schalter">
+        <input type="checkbox" id="reorganisieren">
+        <label for="reorganisieren">Stattdessen die vorhandene Mediathek umsortieren
+          <span class="tipp">Rührt die Inbox nicht an. Ereignisordner bleiben, wo sie sind; leere Ordner werden dabei gelöscht.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="knopfreihe">
+      <button class="zweit" id="knopfVorschau">Vorschau</button>
+      <button class="tat" id="knopfImport" disabled>Wirklich ausführen</button>
+      <span class="laufstatus" id="laufstatus"></span>
+    </div>
+
+    <div id="ergebnisBereich"></div>
+  </section>
+
+  <!-- ============ Einstellungen ============ -->
+  <section class="blatt" id="blatt-einstellungen" hidden>
+    <div class="gruppe">
+      <h2>Ordner</h2>
+      <p class="erlaeuterung">Diese Pfade gelten auch für den Doppelklick-Start. Die Inbox muss es geben; Mediathek und Protokolle werden beim ersten Lauf angelegt, wenn der übergeordnete Ordner vorhanden ist.</p>
+      <div class="felder eins">
+        <label class="feld">
+          <span class="name">Inbox – hier kommen neue Dateien hinein</span>
+          <input type="text" class="pfad" id="eInbox" placeholder="E:\GoDigital Medienimport\inbox">
+        </label>
+        <label class="feld">
+          <span class="name">Mediathek – hierhin wird einsortiert</span>
+          <input type="text" class="pfad" id="eMediathek" placeholder="E:\GoDigital Medienimport\mediathek">
+        </label>
+        <label class="feld">
+          <span class="name">Protokolle</span>
+          <input type="text" class="pfad" id="eProtokolle" placeholder="E:\GoDigital Medienimport\protokolle">
+        </label>
+      </div>
+      <div id="ordnerhinweis"></div>
+    </div>
+
+    <div class="gruppe">
+      <h2>Ablage</h2>
+      <div class="felder">
+        <label class="feld">
+          <span class="name">Ordnerschema</span>
+          <select id="eGruppierung">
+            <option value="JahrMonat">2026 \ 2026-09 \ Datei</option>
+            <option value="Jahr">2026 \ Datei</option>
+            <option value="Tag">2026-09-10 \ Datei</option>
+            <option value="Keine">Alles direkt in die Mediathek</option>
+          </select>
+        </label>
+        <label class="feld">
+          <span class="name">Name des Ereignis-Zweigs</span>
+          <input type="text" id="eEreignisOrdnerName" placeholder="Ereignisse">
+        </label>
+      </div>
+      <div class="schalter">
+        <input type="checkbox" id="eUnterordnerAlsEreignisse">
+        <label for="eUnterordnerAlsEreignisse">Unterordner der Inbox als Ereignis werten</label>
+      </div>
+    </div>
+
+    <div class="gruppe">
+      <h2>Dateitypen</h2>
+      <p class="erlaeuterung" id="typenhinweis">Nur diese Endungen werden angefasst.</p>
+      <div class="typen" id="eTypen"></div>
+      <div class="felder" style="margin-top:16px">
+        <label class="feld">
+          <span class="name">Namensfilter</span>
+          <input type="text" id="ePraefix" placeholder="leer = alle Dateien">
+        </label>
+      </div>
+    </div>
+
+    <div class="gruppe">
+      <h2>ExifTool</h2>
+      <div class="felder eins">
+        <label class="feld">
+          <span class="name">Pfad zur exiftool.exe</span>
+          <input type="text" class="pfad" id="eExifToolPath" placeholder="E:\Exiftool\exiftool.exe">
+          <span class="tipp">Wird nur beim Import gebraucht, nicht beim Umsortieren.</span>
+        </label>
+      </div>
+      <div class="schalter">
+        <input type="checkbox" id="eVideoZeitAlsOrtszeit">
+        <label for="eVideoZeitAlsOrtszeit">Videozeiten von UTC in Ortszeit umrechnen
+          <span class="tipp">Ohne das sortieren sich Videos gegenüber Fotos desselben Tages um den Zeitzonenversatz verschoben ein.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="knopfreihe">
+      <button class="tat" id="knopfSpeichern">Speichern</button>
+      <button class="zweit" id="knopfZuruecksetzen">Änderungen verwerfen</button>
+      <span class="laufstatus" id="einstellungsdatei"></span>
+    </div>
+    <div id="einstellungshinweis"></div>
+  </section>
+
+  <!-- ============ Protokolle ============ -->
+  <section class="blatt" id="blatt-protokolle" hidden>
+    <div class="gruppe">
+      <h2>Frühere Läufe</h2>
+      <div class="protokollliste" id="protokollliste"><span class="leer">wird geladen …</span></div>
+      <div id="protokollinhalt"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+var token = new URLSearchParams(location.search).get("t") || "";
+var alleTypen = [];
+var gespeichert = null;
+var festeOrdner = [];
+var vorschauGesehen = false;
+
+function el(id) { return document.getElementById(id); }
+
+async function ruf(pfad, optionen) {
+  var o = optionen || {};
+  o.headers = Object.assign({ "X-Token": token, "Content-Type": "application/json" }, o.headers || {});
+  var antwort = await fetch(pfad, o);
+  var daten;
+  try { daten = await antwort.json(); }
+  catch (e) { throw new Error("Der Dienst hat unlesbar geantwortet (HTTP " + antwort.status + ")."); }
+  if (daten && daten.ok === false && daten.fehler) throw new Error(daten.fehler);
+  return daten;
+}
+
+function hinweis(ziel, art, inhalt) {
+  ziel.innerHTML = "";
+  if (!inhalt) return;
+  var d = document.createElement("div");
+  d.className = "hinweis " + art;
+  d.textContent = inhalt;
+  ziel.appendChild(d);
+}
+
+/* ---------- Reiter ---------- */
+Array.prototype.forEach.call(document.querySelectorAll('[role=tab]'), function (knopf) {
+  knopf.addEventListener("click", function () {
+    Array.prototype.forEach.call(document.querySelectorAll('[role=tab]'), function (k) {
+      k.setAttribute("aria-selected", k === knopf ? "true" : "false");
+    });
+    ["import", "einstellungen", "protokolle"].forEach(function (name) {
+      el("blatt-" + name).hidden = (name !== knopf.dataset.blatt);
+    });
+    if (knopf.dataset.blatt === "protokolle") ladeProtokolle();
+  });
+});
+
+/* ---------- Lage ---------- */
+function kennzahl(zahl, was) {
+  var d = document.createElement("div");
+  var z = document.createElement("span");
+  z.className = "zahl";
+  z.textContent = zahl;
+  var w = document.createElement("span");
+  w.className = "was";
+  w.textContent = was;
+  d.appendChild(z); d.appendChild(w);
+  return d;
+}
+
+async function ladeLage() {
+  try {
+    var d = await ruf("/api/lage");
+    var l = d.lage;
+    el("ortMediathek").textContent = l.mediathek;
+    el("lage").innerHTML = "";
+    el("lage").appendChild(kennzahl(l.inboxDateien, l.inboxDateien === 1 ? "Datei in der Inbox" : "Dateien in der Inbox"));
+    el("lage").appendChild(kennzahl(l.inboxOrdner.length, l.inboxOrdner.length === 1 ? "Ereignisordner" : "Ereignisordner"));
+    el("lage").appendChild(kennzahl(l.mediathekDateien, "in der Mediathek"));
+
+    if (!l.exifToolVorhanden) {
+      hinweis(el("lagehinweis"), "fehler", "ExifTool liegt nicht unter " + l.exifTool + ". Ein Import bricht damit ab — den Pfad unter Einstellungen korrigieren.");
+    } else if (!l.inboxVorhanden) {
+      hinweis(el("lagehinweis"), "fehler", "Den Inbox-Ordner gibt es nicht: " + l.inbox);
+    } else if (!l.mediathekVorhanden) {
+      hinweis(el("lagehinweis"), "warn", "Die Mediathek gibt es noch nicht. Sie wird beim ersten Lauf angelegt: " + l.mediathek);
+    } else {
+      hinweis(el("lagehinweis"), "", "");
+    }
+  } catch (e) {
+    hinweis(el("lagehinweis"), "fehler", e.message);
+  }
+}
+
+/* ---------- Einstellungen ---------- */
+async function ladeEinstellungen() {
+  var d = await ruf("/api/einstellungen");
+  var e = d.einstellungen;
+  alleTypen = e.alleTypen;
+  festeOrdner = e.festeOrdner || [];
+  gespeichert = e.werte;
+  el("einstellungsdatei").textContent = e.datei;
+  zeigeEinstellungen(e.werte);
+  if (e.warnung) hinweis(el("einstellungshinweis"), "warn", e.warnung);
+}
+
+function zeigeEinstellungen(w) {
+  el("eInbox").value = w.Inbox || "";
+  el("eMediathek").value = w.Mediathek || "";
+  el("eProtokolle").value = w.Protokolle || "";
+  el("eGruppierung").value = w.Gruppierung;
+  el("ePraefix").value = w.Praefix || "";
+  el("eEreignisOrdnerName").value = w.EreignisOrdnerName || "Ereignisse";
+  el("eExifToolPath").value = w.ExifToolPath || "";
+  el("eUnterordnerAlsEreignisse").checked = !!w.UnterordnerAlsEreignisse;
+  el("eVideoZeitAlsOrtszeit").checked = !!w.VideoZeitAlsOrtszeit;
+  el("gruppierung").value = w.Gruppierung;
+
+  // Ordner, die beim Start per Kommandozeile vorgegeben wurden, sind fuer diese
+  // Sitzung fest. Ein Speichern wuerde sie nicht wirksam machen.
+  ["Inbox", "Mediathek", "Protokolle"].forEach(function (n) {
+    el("e" + n).disabled = (festeOrdner.indexOf(n) >= 0);
+  });
+  if (festeOrdner.length) {
+    hinweis(el("ordnerhinweis"), "warn",
+      "Für diese Sitzung per Kommandozeile vorgegeben: " + festeOrdner.join(", ") +
+      ". Diese Felder lassen sich erst wieder ändern, wenn die Oberfläche ohne diese Angaben gestartet wird.");
+  } else {
+    hinweis(el("ordnerhinweis"), "", "");
+  }
+
+  var gewaehlt = (w.Erweiterungen || []).map(function (t) { return String(t).replace(/^\./, "").toLowerCase(); });
+  var liste = alleTypen.slice();
+  gewaehlt.forEach(function (t) { if (liste.indexOf(t) < 0) liste.push(t); });
+
+  el("eTypen").innerHTML = "";
+  liste.forEach(function (t) {
+    var label = document.createElement("label");
+    var box = document.createElement("input");
+    box.type = "checkbox"; box.value = t; box.checked = gewaehlt.indexOf(t) >= 0;
+    box.id = "typ-" + t;
+    box.addEventListener("change", pruefeTypen);
+    label.appendChild(box);
+    label.appendChild(document.createTextNode(t));
+    el("eTypen").appendChild(label);
+  });
+  pruefeTypen();
+}
+
+function gewaehlteTypen() {
+  return Array.prototype.slice.call(el("eTypen").querySelectorAll("input:checked")).map(function (b) { return b.value; });
+}
+
+function pruefeTypen() {
+  var n = gewaehlteTypen().length;
+  var gesamt = el("eTypen").querySelectorAll("input").length;
+  el("knopfSpeichern").disabled = (n === 0);
+  el("typenhinweis").textContent = (n === 0)
+    ? "Mindestens ein Typ muss ausgewählt sein. Eine leere Liste schaltet den Filter ab, statt nichts zu importieren — dann landen auch .txt und .xmp in der Mediathek."
+    : n + " von " + gesamt + " Endungen werden angefasst.";
+}
+
+el("knopfSpeichern").addEventListener("click", async function () {
+  var daten = {
+    Inbox: el("eInbox").value.trim(),
+    Mediathek: el("eMediathek").value.trim(),
+    Protokolle: el("eProtokolle").value.trim(),
+    Gruppierung: el("eGruppierung").value,
+    Praefix: el("ePraefix").value.trim(),
+    Erweiterungen: gewaehlteTypen(),
+    UnterordnerAlsEreignisse: el("eUnterordnerAlsEreignisse").checked,
+    EreignisOrdnerName: el("eEreignisOrdnerName").value.trim() || "Ereignisse",
+    ExifToolPath: el("eExifToolPath").value.trim(),
+    VideoZeitAlsOrtszeit: el("eVideoZeitAlsOrtszeit").checked
+  };
+  el("knopfSpeichern").disabled = true;
+  try {
+    var d = await ruf("/api/einstellungen", { method: "POST", body: JSON.stringify(daten) });
+    gespeichert = d.werte;
+    hinweis(el("einstellungshinweis"), "gut", d.hinweis);
+    vorschauGesehen = false;
+    el("knopfImport").disabled = true;
+    ladeLage();
+  } catch (e) {
+    hinweis(el("einstellungshinweis"), "fehler", e.message);
+  } finally {
+    el("knopfSpeichern").disabled = false;
+  }
+});
+
+el("knopfZuruecksetzen").addEventListener("click", function () {
+  if (gespeichert) zeigeEinstellungen(gespeichert);
+  hinweis(el("einstellungshinweis"), "", "");
+});
+
+/* ---------- Lauf ---------- */
+function laufEingaben() {
+  return {
+    ereignis: el("ereignis").value.trim(),
+    praefix: el("praefix").value.trim(),
+    gruppierung: el("gruppierung").value,
+    ohneUnterordner: el("ohneUnterordner").checked,
+    alleDateien: el("alleDateien").checked,
+    reorganisieren: el("reorganisieren").checked
+  };
+}
+
+function entwerte() {
+  vorschauGesehen = false;
+  el("knopfImport").disabled = true;
+}
+
+el("reorganisieren").addEventListener("change", function () {
+  var an = el("reorganisieren").checked;
+  ["ereignis", "praefix", "ohneUnterordner", "alleDateien"].forEach(function (id) { el(id).disabled = an; });
+  entwerte();
+});
+
+["ereignis", "praefix", "gruppierung", "ohneUnterordner", "alleDateien"].forEach(function (id) {
+  el(id).addEventListener("input", entwerte);
+  el(id).addEventListener("change", entwerte);
+});
+
+el("knopfVorschau").addEventListener("click", function () { starteLauf(true); });
+
+el("knopfImport").addEventListener("click", function () {
+  if (!vorschauGesehen) return;
+  var frage = el("reorganisieren").checked
+    ? "Die Mediathek wird jetzt wirklich umsortiert. Leere Ordner werden dabei gelöscht. Fortfahren?"
+    : "Die Dateien werden jetzt wirklich verschoben. Fortfahren?";
+  if (!confirm(frage)) return;
+  starteLauf(false);
+});
+
+async function starteLauf(vorschau) {
+  var bereich = el("ergebnisBereich");
+  el("knopfVorschau").disabled = true;
+  el("knopfImport").disabled = true;
+  el("laufstatus").textContent = vorschau ? "Vorschau läuft …" : "Import läuft …";
+  bereich.innerHTML = "";
+  try {
+    var d = await ruf(vorschau ? "/api/vorschau" : "/api/import", {
+      method: "POST", body: JSON.stringify(laufEingaben())
+    });
+    if (vorschau) zeigeVorschau(d); else zeigeErgebnis(d);
+  } catch (e) {
+    hinweis(bereich, "fehler", e.message);
+  } finally {
+    el("knopfVorschau").disabled = false;
+    el("laufstatus").textContent = "";
+    ladeLage();
+  }
+}
+
+function abbruchGrund(d) {
+  var a = (d.meldungen || []).filter(function (m) { return m.status === "ABBRUCH"; });
+  if (a.length) return a[0].grund;
+  if (d.exitCode !== 0) return "Das Importskript brach ab (Code " + d.exitCode + ").";
+  return null;
+}
+
+function meldungsTabelle(meldungen) {
+  var rahmen = document.createElement("div");
+  rahmen.className = "tabellenrahmen";
+  var t = document.createElement("table");
+  t.innerHTML = "<thead><tr><th>Status</th><th>Datei</th><th>Grund</th></tr></thead>";
+  var koerper = document.createElement("tbody");
+  meldungen.forEach(function (m) {
+    var tr = document.createElement("tr");
+    var td1 = document.createElement("td");
+    var marke = document.createElement("span");
+    marke.className = "marke " + m.status;
+    marke.textContent = m.status;
+    td1.appendChild(marke);
+    var td2 = document.createElement("td"); td2.className = "pfad"; td2.textContent = m.datei;
+    var td3 = document.createElement("td"); td3.textContent = m.grund;
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+    koerper.appendChild(tr);
+  });
+  t.appendChild(koerper);
+  rahmen.appendChild(t);
+  return rahmen;
+}
+
+function ueberschrift(zahl, text) {
+  var p = document.createElement("p");
+  p.className = "ueberschrift";
+  var b = document.createElement("b");
+  b.textContent = zahl;
+  p.appendChild(b);
+  p.appendChild(document.createTextNode(" " + text));
+  return p;
+}
+
+function zeigeVorschau(d) {
+  var bereich = el("ergebnisBereich");
+  bereich.innerHTML = "";
+  var grund = abbruchGrund(d);
+  if (grund) { hinweis(bereich, "fehler", grund); return; }
+
+  var aktionen = d.aktionen || [];
+  var rest = (d.meldungen || []).filter(function (m) { return m.status !== "ABBRUCH"; });
+
+  if (!aktionen.length && !rest.length) {
+    hinweis(bereich, "warn", "Es gibt nichts zu tun.");
+    return;
+  }
+
+  var kasten = document.createElement("div");
+  kasten.className = "ergebnis";
+
+  if (aktionen.length) {
+    kasten.appendChild(ueberschrift(aktionen.length, aktionen.length === 1 ? "Datei würde verschoben" : "Dateien würden verschoben"));
+    var rahmen = document.createElement("div");
+    rahmen.className = "tabellenrahmen";
+    var t = document.createElement("table");
+    t.innerHTML = "<thead><tr><th>Datei</th><th></th><th>Zielordner</th><th>Neuer Name</th></tr></thead>";
+    var koerper = document.createElement("tbody");
+    aktionen.forEach(function (a) {
+      var tr = document.createElement("tr");
+      var td1 = document.createElement("td"); td1.className = "pfad"; td1.textContent = a.quelleName;
+      var td2 = document.createElement("td"); td2.className = "pfeil"; td2.textContent = "→";
+      var td3 = document.createElement("td"); td3.className = "pfad"; td3.textContent = a.zielOrdner || "(Wurzel)";
+      var td4 = document.createElement("td"); td4.className = "pfad"; td4.textContent = a.zielName;
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+      koerper.appendChild(tr);
+    });
+    t.appendChild(koerper);
+    rahmen.appendChild(t);
+    kasten.appendChild(rahmen);
+  }
+
+  if (rest.length) {
+    var p = document.createElement("p");
+    p.className = "ueberschrift";
+    p.style.marginTop = "22px";
+    var b = document.createElement("b");
+    b.textContent = rest.length;
+    p.appendChild(b);
+    p.appendChild(document.createTextNode(rest.length === 1 ? " Datei bleibt liegen" : " Dateien bleiben liegen"));
+    kasten.appendChild(p);
+    kasten.appendChild(meldungsTabelle(rest));
+  }
+
+  bereich.appendChild(kasten);
+  vorschauGesehen = true;
+  el("knopfImport").disabled = (aktionen.length === 0);
+}
+
+function zeigeErgebnis(d) {
+  var bereich = el("ergebnisBereich");
+  bereich.innerHTML = "";
+  var grund = abbruchGrund(d);
+  if (grund) { hinweis(bereich, "fehler", grund); return; }
+
+  var v = (d.verschoben === null || d.verschoben === undefined) ? "?" : d.verschoben;
+  var u = (d.uebersprungen === null || d.uebersprungen === undefined) ? "?" : d.uebersprungen;
+  hinweis(bereich, "gut", "Fertig. Verschoben: " + v + ", übersprungen: " + u +
+          (d.protokollName ? ". Protokoll: " + d.protokollName : ""));
+
+  if ((d.meldungen || []).length) {
+    var kasten = document.createElement("div");
+    kasten.className = "ergebnis";
+    kasten.appendChild(meldungsTabelle(d.meldungen));
+    bereich.appendChild(kasten);
+  }
+  entwerte();
+}
+
+/* ---------- Protokolle ---------- */
+async function ladeProtokolle() {
+  var liste = el("protokollliste");
+  liste.innerHTML = "";
+  el("protokollinhalt").innerHTML = "";
+  try {
+    var d = await ruf("/api/protokolle");
+    if (!d.protokolle.length) {
+      liste.innerHTML = '<span class="leer">Noch keine Protokolle. Eine Vorschau schreibt keines, nur ein echter Lauf.</span>';
+      return;
+    }
+    d.protokolle.forEach(function (p, i) {
+      var b = document.createElement("button");
+      b.textContent = p.datum;
+      b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+      b.addEventListener("click", function () {
+        Array.prototype.forEach.call(liste.querySelectorAll("button"), function (x) {
+          x.setAttribute("aria-pressed", x === b ? "true" : "false");
+        });
+        zeigeProtokoll(p.name);
+      });
+      liste.appendChild(b);
+      if (i === 0) zeigeProtokoll(p.name);
+    });
+  } catch (e) {
+    hinweis(el("protokollinhalt"), "fehler", e.message);
+  }
+}
+
+async function zeigeProtokoll(name) {
+  try {
+    var d = await ruf("/api/protokoll?name=" + encodeURIComponent(name));
+    var ziel = el("protokollinhalt");
+    ziel.innerHTML = "";
+    var pre = document.createElement("pre");
+    pre.textContent = d.inhalt;
+    ziel.appendChild(pre);
+  } catch (e) {
+    hinweis(el("protokollinhalt"), "fehler", e.message);
+  }
+}
+
+/* ---------- Start ---------- */
+if (!token) {
+  hinweis(el("lagehinweis"), "fehler", "In der Adresse fehlt das Zugangstoken. Bitte die Seite über die Adresse aus dem Starterfenster öffnen.");
+} else {
+  ladeLage();
+  ladeEinstellungen().catch(function (e) { hinweis(el("einstellungshinweis"), "fehler", e.message); });
+}
+</script>
+</body>
+</html>
