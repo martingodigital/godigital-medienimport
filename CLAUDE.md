@@ -35,7 +35,10 @@ noch Mediathek, auch nicht sein `archiv\`.
 | `scripts\Starte-Weboberflaeche.ps1` | HTTP-Dienst auf 127.0.0.1, ruft den Motor als eigenen Prozess auf. |
 | `web\index.html` | Die Oberfläche. Wird vom Dienst ausgeliefert, lädt nichts von außen. |
 | `protokolle\` | Ein Markdown-Protokoll pro echtem Lauf (`protokoll_<zeitstempel>.md`). |
-| `.gitignore` | Hält Medien, Laufprotokolle und `.bak`-Kopien aus dem Repository. |
+| `protokolle\…_Anleitung-bebildert.pdf` | Bebilderte Anwenderanleitung. Versioniert, anders als die Laufprotokolle daneben. |
+| `protokolle\…_Anleitung-bebildert.html` | Die Quelle dazu. Alle Zeichnungen stecken als SVG darin, nichts wird nachgeladen. |
+| `DOKU-STIL.md` | Kopie der Skill `anwenderdoku-pdf` (Stand 2026-09-25). Bauweise und Layout der bebilderten Anleitung. Maßgeblich bleibt die Skill-Datei. |
+| `.gitignore` | Hält Medien, Laufprotokolle und `.bak`-Kopien aus dem Repository. Ignoriert wird nur `protokolle\protokoll_*.md`, nicht der ganze Ordner: Anleitung und HTML-Quelle darin sind versioniert. |
 | `Medien importieren.cmd` | **Doppelklick-Start** (ohne Claude). |
 | `Vorschau (aendert nichts).cmd` | Doppelklick-Vorschau (`-WhatIf`). |
 | `Weboberflaeche starten.cmd` | Doppelklick-Start der Oberfläche. Fenster muss offen bleiben. |
@@ -130,6 +133,13 @@ Rangfolge Parameter > Datei > Ordner neben dem Skript um und löst einen relativ
 `$Root` auf, damit `..\Fotos` nicht vom Arbeitsverzeichnis des Aufrufers abhängt. Ein leerer
 Wert in der Datei zählt wie ein fehlender. `-EinstellungsDatei` bleibt der einzige Pfad, der
 nur über die Kommandozeile geht – er muss feststehen, bevor die Datei gelesen werden kann.
+
+Die eingecheckte `config\einstellungen.json` ist an diesen Rechner gebunden: Sie trägt vier
+absolute Pfade, dreimal `E:\GoDigital Medienimport\…` und dazu `E:\Exiftool\exiftool.exe`.
+Weil die Datei vor dem eingebauten Standard greift, zeigt ein Klon auf einem anderen Laufwerk
+oder in einem anderen Ordner nicht auf seine eigenen Ordner, sondern ins Leere – die
+Rückfallwerte neben dem Skript kommen gerade nicht zum Zug. Wer das Repository umzieht,
+passt zuerst diese Datei an oder löscht sie.
 
 Wer einen Schlüssel ergänzt, braucht dafür eine eigene `Get-Einstellung`-Zeile – die Datei
 wird nicht automatisch auf Parameter abgebildet.
@@ -312,6 +322,11 @@ andere Wortstellung, andere Anführungszeichen. `Read-SkriptAusgabe` filtert sta
 und zieht die Windows-Pfade aus der Zeile: erster Treffer Ziel, zweiter Quelle. Die
 `Set-Content`-Zeile des unterdrückten Protokolls fällt damit von selbst weg.
 
+**Der Port steht nicht fest.** Der Dienst probiert ab `-Port` (Standard 8787) bis zu zwanzig
+Ports aufwärts und nimmt den ersten freien; erst danach bricht er mit `exit 1` ab. Die
+tatsächliche Adresse steht beim Start auf der Konsole. Wer den Dienst von außen anspricht,
+darf 8787 deshalb nicht fest verdrahten – ein zweiter laufender Dienst sitzt auf 8788.
+
 **Zugriffsschutz.** Der Dienst bindet nur an `http://127.0.0.1:<port>/` – das geht ohne
 Adminrechte, eine URL-ACL ist nicht nötig (geprüft). Jeder API-Aufruf verlangt ein beim Start
 erzeugtes Token, das in der Startadresse steht; ohne Token antwortet der Dienst mit 403.
@@ -435,6 +450,20 @@ ist, weil zwei gleichzeitige Läufe auf derselben Inbox nichts Gutes ergäben.
   .NET-Methoden anders als PowerShell 7.
 - Ändert sich das Verhalten, `ANLEITUNG.md` mitziehen. Sie ist die Nutzerdoku und
   beschreibt dieselben Abläufe in nicht-technischer Sprache; sie darf nicht auseinanderlaufen.
+- Dasselbe gilt für die bebilderte Anleitung in `protokolle\`. Geändert wird die
+  HTML-Quelle, daraus entsteht das PDF neu; das PDF selbst lässt sich nicht bearbeiten.
+  Stil und Aufbau stehen in `DOKU-STIL.md`:
+
+  ```bash
+  chrome.exe --headless=new --disable-gpu --no-pdf-header-footer \
+    --print-to-pdf="GoDigital-Medienimport_Anleitung-bebildert.pdf" \
+    "file:///E:/GoDigital Medienimport/protokolle/GoDigital-Medienimport_Anleitung-bebildert.html"
+  ```
+
+  Danach das PDF seitenweise rendern und ansehen (`pypdfium2`), sonst fallen abgeschnittene
+  SVG-Beschriftungen und halb leere Seiten erst beim Leser auf. Der Umbruch ist eingestellt,
+  nicht zufällig: Jede Zeichnung steht mit ihrer Bildunterschrift zusammen, und der
+  Spickzettel bekommt als einziger Abschnitt einen erzwungenen Seitenumbruch.
 - `E:\Drohne-Foto-Workflow` nicht anfassen. Getrenntes, eingefrorenes Projekt.
 
 ## Voraussetzungen

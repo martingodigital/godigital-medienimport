@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>GoDigital Medienimport – bebilderte Anleitung</title>
+<!--
+  Quelle des PDFs protokolle\GoDigital-Medienimport_Anleitung-bebildert.pdf.
+  Bauen mit:
+    chrome.exe --headless=new --disable-gpu --no-pdf-header-footer ^
+      --print-to-pdf="GoDigital-Medienimport_Anleitung-bebildert.pdf" ^
+      "file:///E:/GoDigital Medienimport/protokolle/GoDigital-Medienimport_Anleitung-bebildert.html"
+  Stil und Regeln: DOKU-STIL.md im Projektordner.
+  Alle Zeichnungen stehen als SVG in dieser Datei, es werden keine Bilddateien geladen.
+-->
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+
+  :root {
+    --akzent:   #14607a;
+    --dunkel:   #13364a;
+    --text:     #1f2a30;
+    --grau:     #5b6b76;
+    --linie:    #d8dee3;
+    --rahmen:   #c6ced4;
+    --hellblau: #eaf1f6;
+    --kastenbl: #eef6f9;
+    --gruen:    #3f8f54;
+    --gruenbg:  #e8f4ea;
+    --gelb:     #d9892a;
+    --gelbbg:   #fdf0dc;
+    --codebg:   #eef1f3;
+  }
+
+  html { font-size: 11pt; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  /* --- Titelblock --------------------------------------------------------- */
+  h1 {
+    font-size: 26pt;
+    line-height: 1.2;
+    color: var(--dunkel);
+    margin: 0 0 6px 0;
+  }
+  .untertitel { font-size: 12pt; color: var(--grau); margin: 0 0 10px 0; }
+  .stand {
+    font-size: 9.5pt;
+    color: var(--grau);
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--akzent);
+  }
+
+  /* --- Abschnitte --------------------------------------------------------- */
+  h2 {
+    font-size: 14pt;
+    color: var(--dunkel);
+    margin: 20px 0 8px 0;
+    padding-top: 10px;
+    border-top: 2px solid var(--akzent);
+    page-break-after: avoid;
+  }
+  /* Der Titelblock bringt seine eigene Linie mit, sonst stuenden hier zwei. */
+  h2:first-of-type { margin-top: 4px; padding-top: 0; border-top: none; }
+  h2 .nr { color: var(--akzent); margin-right: 6px; }
+  /* Der Spickzettel soll auf einer Seite stehen, sonst taugt er nicht zum Nachschlagen.
+     Der einzige erzwungene Seitenumbruch im Dokument. */
+  #spickzettel { page-break-before: always; margin-top: 4px; padding-top: 0; border-top: none; }
+  h3 {
+    font-size: 11.5pt;
+    color: var(--dunkel);
+    margin: 14px 0 6px 0;
+    page-break-after: avoid;
+  }
+  p { margin: 0 0 10px 0; }
+
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.88em;
+    background: var(--codebg);
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  em { font-style: italic; }
+
+  /* --- Hinweiskaesten ----------------------------------------------------- */
+  .kasten {
+    background: var(--hellblau);
+    border-left: 4px solid var(--akzent);
+    padding: 10px 16px 2px 16px;
+    margin: 12px 0 14px 0;
+    page-break-inside: avoid;
+  }
+  .kasten .kopf {
+    font-weight: 600;
+    color: var(--dunkel);
+    margin-bottom: 6px;
+  }
+  .kasten.gruen { background: var(--gruenbg); border-left-color: var(--gruen); }
+  .kasten.gelb  { background: var(--gelbbg);  border-left-color: var(--gelb); }
+
+  /* --- Tabellen ----------------------------------------------------------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 10pt;
+  }
+  thead th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--dunkel);
+    background: #f2f5f7;
+    border-bottom: 1px solid var(--linie);
+    padding: 7px 10px;
+  }
+  tbody td {
+    vertical-align: top;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--linie);
+  }
+  tbody td:first-child { width: 32%; }
+  tr { page-break-inside: avoid; }
+  thead tr { page-break-after: avoid; }
+
+  /* --- Grafiken ----------------------------------------------------------- */
+  figure {
+    margin: 12px 0 14px 0;
+    page-break-inside: avoid;
+  }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption {
+    font-size: 9.5pt;
+    color: var(--grau);
+    margin-top: 6px;
+  }
+  figcaption b { color: var(--akzent); }
+
+  svg text { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; fill: var(--text); }
+  svg text.m { font-family: Consolas, "Courier New", monospace; }
+  svg text.g { fill: var(--grau); }
+  svg text.k { font-weight: 600; fill: var(--dunkel); }
+  svg .rahmen { fill: #ffffff; stroke: var(--rahmen); stroke-width: 1; }
+  svg .akzentbox { fill: var(--kastenbl); stroke: var(--akzent); stroke-width: 1.5; }
+  svg .pfeil { stroke: var(--akzent); stroke-width: 2; fill: none; }
+
+  /* --- Fusszeile ---------------------------------------------------------- */
+  .fuss {
+    margin-top: 26px;
+    padding-top: 10px;
+    border-top: 1px solid var(--linie);
+    font-size: 9pt;
+    color: var(--grau);
+  }
+</style>
+</head>
+<body>
+
+<h1>GoDigital Medienimport</h1>
+<p class="untertitel">Fotos und Videos ordnen – bebilderte Anleitung für die tägliche Nutzung</p>
+<p class="stand">Stand 25. September 2026 · Diese Fassung richtet sich an Anwender. Die technische Fassung mit allen
+Aufrufen steht in <code>ANLEITUNG.md</code> im Projektordner.</p>
+
+<!-- ====================================================================== 1 -->
+<h2><span class="nr">1</span>Wozu das Programm gut ist</h2>
+
+<p>Fotos und Videos kommen von überall her: vom Handy, aus der Kamera, von der Drohne, aus WhatsApp oder aus dem
+Browser. Jedes Gerät vergibt seine eigenen Namen, und die sagen nichts darüber aus, wann eine Aufnahme entstanden
+ist. <code>IMG_1001.JPG</code> vom Handy und <code>DJI_0042.JPG</code> von der Drohne können vom selben Nachmittag
+stammen – im Ordner stehen sie trotzdem weit auseinander.</p>
+
+<p>Das Programm nimmt jede neue Datei, stellt ihr das Aufnahmedatum voran und legt sie in einen Ordner für den
+passenden Monat. Danach liegen alle Aufnahmen in der Reihenfolge, in der sie entstanden sind, ganz gleich, von
+welchem Gerät sie kamen.</p>
+
+<figure>
+<svg viewBox="0 0 672 200" role="img" aria-label="Ablauf vom Gerät über die Inbox in die Mediathek">
+  <defs>
+    <marker id="pf1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#14607a"/>
+    </marker>
+  </defs>
+
+  <text x="8" y="12" class="g" font-size="10">Woher die Dateien kommen</text>
+  <rect class="rahmen" x="8" y="20" width="122" height="32" rx="4"/>
+  <text x="22" y="40" font-size="11">Handy</text>
+  <rect class="rahmen" x="8" y="58" width="122" height="32" rx="4"/>
+  <text x="22" y="78" font-size="11">Kamera</text>
+  <rect class="rahmen" x="8" y="96" width="122" height="32" rx="4"/>
+  <text x="22" y="116" font-size="11">Drohne</text>
+  <rect class="rahmen" x="8" y="134" width="122" height="36" rx="4"/>
+  <text x="22" y="150" font-size="11">Downloads,</text>
+  <text x="22" y="164" font-size="11">Screenshots</text>
+
+  <path class="pfeil" d="M136 100 L172 100" marker-end="url(#pf1)"/>
+  <text x="154" y="92" class="g" font-size="10" text-anchor="middle">kopieren</text>
+
+  <rect class="akzentbox" x="180" y="56" width="132" height="92" rx="6"/>
+  <text x="192" y="78" class="k m" font-size="11.5">inbox\</text>
+  <text x="192" y="98" class="m" font-size="10">IMG_1001.JPG</text>
+  <text x="192" y="114" class="m" font-size="10">DJI_0042.JPG</text>
+  <text x="192" y="136" class="g" font-size="9.5">noch ungeordnet</text>
+
+  <path class="pfeil" d="M318 100 L354 100" marker-end="url(#pf1)"/>
+  <text x="336" y="92" class="g" font-size="10" text-anchor="middle">Doppelklick</text>
+
+  <rect class="rahmen" x="362" y="64" width="120" height="76" rx="6"/>
+  <text x="374" y="86" class="k" font-size="11.5">Programm</text>
+  <text x="374" y="106" class="g" font-size="10">liest das</text>
+  <text x="374" y="120" class="g" font-size="10">Aufnahmedatum</text>
+
+  <path class="pfeil" d="M488 100 L524 100" marker-end="url(#pf1)"/>
+
+  <rect class="akzentbox" x="532" y="40" width="132" height="124" rx="6"/>
+  <text x="544" y="62" class="k m" font-size="11.5">mediathek\</text>
+  <text x="548" y="82" class="m" font-size="10">2026\</text>
+  <text x="558" y="98" class="m" font-size="10">2026-09\</text>
+  <text x="568" y="114" class="m" font-size="10">20260910_…</text>
+  <text x="568" y="130" class="m" font-size="10">20260910_…</text>
+  <text x="544" y="152" class="g" font-size="9.5">nach Datum sortiert</text>
+
+  <text x="8" y="192" class="g" font-size="9.5">Alles Neue kommt zuerst in die Inbox. Das Programm räumt von dort aus auf; liegen bleibt nur, was es übersprungen hat.</text>
+</svg>
+<figcaption><b>Bild 1:</b> Der Weg einer Datei. Nur der mittlere Schritt ist Ihre Arbeit: Dateien in die Inbox
+kopieren und den Import starten.</figcaption>
+</figure>
+
+<!-- ====================================================================== 2 -->
+<h2><span class="nr">2</span>Der neue Dateiname</h2>
+
+<p>Jede Datei behält ihren ursprünglichen Namen. Davor setzt das Programm Datum und Uhrzeit der Aufnahme. Das genügt,
+damit jeder Dateimanager die Bilder von allein in die richtige Reihenfolge bringt – auch quer über mehrere Geräte
+hinweg.</p>
+
+<figure>
+<svg viewBox="0 0 672 152" role="img" aria-label="Aufbau des neuen Dateinamens">
+  <rect class="akzentbox" x="140" y="10" width="440" height="44" rx="8"/>
+  <text x="160" y="39" class="m" font-size="15">2026 09 10</text>
+  <text x="258" y="39" class="m" font-size="15">_</text>
+  <text x="278" y="39" class="m" font-size="15">10 15 30</text>
+  <text x="360" y="39" class="m" font-size="15">_</text>
+  <text x="380" y="39" class="m" font-size="15">IMG_1001</text>
+  <text x="520" y="39" class="m" font-size="15">.JPG</text>
+
+  <g stroke="#5b6b76" stroke-width="1" fill="none">
+    <path d="M160 60 L160 70 L250 70 L250 60"/>
+    <path d="M278 60 L278 70 L348 70 L348 60"/>
+    <path d="M380 60 L380 70 L455 70 L455 60"/>
+    <path d="M520 60 L520 70 L558 70 L558 60"/>
+  </g>
+
+  <text x="160" y="88" class="k" font-size="10.5">Datum</text>
+  <text x="160" y="102" class="g" font-size="9.5">10. September 2026</text>
+  <text x="278" y="88" class="k" font-size="10.5">Uhrzeit</text>
+  <text x="278" y="102" class="g" font-size="9.5">10:15:30 Uhr</text>
+  <text x="380" y="88" class="k" font-size="10.5">Ursprünglicher Name</text>
+  <text x="380" y="102" class="g" font-size="9.5">wie von der Kamera vergeben</text>
+  <text x="520" y="88" class="k" font-size="10.5">Dateityp</text>
+  <text x="520" y="102" class="g" font-size="9.5">bleibt unverändert</text>
+
+  <text x="180" y="132" class="g" font-size="9.5">Der Zusatz steht nur einmal am Anfang. An ihm erkennt das Programm</text>
+  <text x="180" y="146" class="g" font-size="9.5">eine Datei wieder, die ein zweites Mal in die Inbox gerät.</text>
+</svg>
+<figcaption><b>Bild 2:</b> So ist der Name aufgebaut. Aus <code>IMG_1001.JPG</code> wird
+<code>20260910_101530_IMG_1001.JPG</code>.</figcaption>
+</figure>
+
+<h3>Woher das Datum kommt</h3>
+
+<p>Kameras und Handys speichern das Aufnahmedatum unsichtbar in der Datei mit. Das Programm liest genau diesen Wert
+aus. Bei Screenshots, Messenger-Bildern und vielen Downloads fehlt diese Angabe – dann nimmt das Programm das
+Änderungsdatum der Datei. Im Bericht steht in diesem Fall „Datum aus Dateisystem“, damit nachvollziehbar bleibt,
+woher die Angabe stammt.</p>
+
+<p>Videos speichern ihre Zeit oft in der Weltzeit statt in der Uhrzeit vor Ort. Das Programm rechnet das um. Ohne
+diese Umrechnung würde ein Video vom Nachmittag im Sommer zwei Stunden zu früh einsortiert und stünde zwischen den
+Vormittagsfotos.</p>
+
+<div class="kasten">
+  <div class="kopf">Ein Hilfsprogramm im Hintergrund: ExifTool</div>
+  <p>Die Aufnahmedaten liest das Programm nicht selbst aus, sondern überlässt das dem frei verfügbaren ExifTool
+  (<em>exiftool.org</em>). Es muss auf dem Rechner vorhanden sein; erwartet wird es unter
+  <code>E:\Exiftool\exiftool.exe</code>. Liegt es woanders, tragen Sie den Pfad einmalig in der Weboberfläche unter
+  <em>Einstellungen</em> ein.</p>
+  <p>Fehlt ExifTool, bricht der Import mit einer Meldung ab und verschiebt nichts. Für das nachträgliche Umsortieren
+  einer bestehenden Mediathek wird es nicht gebraucht, dafür genügt das Datum im Dateinamen.</p>
+</div>
+
+<!-- ====================================================================== 3 -->
+<h2><span class="nr">3</span>Importieren in drei Schritten</h2>
+
+<figure>
+<svg viewBox="0 0 672 166" role="img" aria-label="Die drei Schritte eines Imports">
+  <defs>
+    <marker id="pf3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#14607a"/>
+    </marker>
+  </defs>
+
+  <rect class="rahmen" x="8" y="10" width="196" height="118" rx="6"/>
+  <circle cx="34" cy="34" r="13" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="34" y="38" font-size="11" text-anchor="middle" fill="#14607a">1</text>
+  <text x="56" y="32" class="k" font-size="11">Dateien kopieren</text>
+  <text x="56" y="47" class="g" font-size="9.5">in den Ordner inbox\</text>
+  <text x="22" y="76" font-size="10">Einfach hineinziehen.</text>
+  <text x="22" y="92" font-size="10">Unterordner sind erlaubt,</text>
+  <text x="22" y="108" font-size="10">siehe Abschnitt 4.</text>
+
+  <path class="pfeil" d="M212 69 L232 69" marker-end="url(#pf3)"/>
+
+  <rect class="rahmen" x="238" y="10" width="196" height="118" rx="6"/>
+  <circle cx="264" cy="34" r="13" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="264" y="38" font-size="11" text-anchor="middle" fill="#14607a">2</text>
+  <text x="286" y="32" class="k" font-size="11">Vorschau ansehen</text>
+  <text x="286" y="47" class="g" font-size="9.5">ändert nichts</text>
+  <text x="252" y="76" class="m" font-size="9">Vorschau (aendert nichts).cmd</text>
+  <text x="252" y="94" font-size="10">Zeigt nur an, was</text>
+  <text x="252" y="110" font-size="10">passieren würde.</text>
+
+  <path class="pfeil" d="M442 69 L462 69" marker-end="url(#pf3)"/>
+
+  <rect class="akzentbox" x="468" y="10" width="196" height="118" rx="6"/>
+  <circle cx="494" cy="34" r="13" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="494" y="38" font-size="11" text-anchor="middle" fill="#14607a">3</text>
+  <text x="516" y="32" class="k" font-size="11">Wirklich importieren</text>
+  <text x="516" y="47" class="g" font-size="9.5">verschiebt die Dateien</text>
+  <text x="482" y="76" class="m" font-size="9">Medien importieren.cmd</text>
+  <text x="482" y="94" font-size="10">Danach liegt ein Bericht</text>
+  <text x="482" y="110" font-size="10">im Ordner protokolle\.</text>
+
+  <text x="8" y="148" class="g" font-size="9.5">Beim Start öffnet sich ein schwarzes Fenster mit der Fortschrittsanzeige. Es schließt sich erst,</text>
+  <text x="8" y="162" class="g" font-size="9.5">wenn Sie eine Taste drücken – so bleibt das Ergebnis in Ruhe lesbar.</text>
+</svg>
+<figcaption><b>Bild 3:</b> Die drei Schritte. Die beiden Startsymbole liegen direkt im Projektordner.</figcaption>
+</figure>
+
+<div class="kasten">
+  <div class="kopf">Die Vorschau ist Ihr Sicherheitsnetz</div>
+  <p>Sie verschiebt nichts und schreibt nichts. Wer unsicher ist, ob die Dateien richtig erkannt werden, schaut erst
+  dort nach. In der Vorschau steht am Ende immer „Verschoben: 0“ – das ist kein Fehler, sondern der Beweis, dass
+  nichts angefasst wurde.</p>
+</div>
+
+<!-- ====================================================================== 4 -->
+<h2><span class="nr">4</span>Urlaub und Feiern zusammenhalten</h2>
+
+<p>Manche Aufnahmen gehören inhaltlich zusammen, auch wenn sie über mehrere Tage oder sogar über einen Monatswechsel
+verteilt sind. Dafür legen Sie in der Inbox einen Ordner an und geben ihm den gewünschten Namen. Alles, was darin
+liegt, landet gemeinsam unter <code>mediathek\Ereignisse\</code> – unter genau diesem Namen.</p>
+
+<figure>
+<svg viewBox="0 0 672 168" role="img" aria-label="Ein Unterordner der Inbox wird zum Ereignisordner">
+  <defs>
+    <marker id="pf4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#14607a"/>
+    </marker>
+  </defs>
+
+  <text x="8" y="12" class="g" font-size="10">Vorher – so legen Sie es an</text>
+  <rect class="rahmen" x="8" y="20" width="300" height="120" rx="6"/>
+  <text x="22" y="46" class="m" font-size="10.5">inbox\</text>
+  <text x="44" y="66" class="m" font-size="10.5">2026-09_Urlaub Italien\</text>
+  <text x="66" y="84" class="m" font-size="10">IMG_1001.HEIC</text>
+  <text x="66" y="100" class="m" font-size="10">IMG_1002.HEIC</text>
+  <text x="66" y="116" class="m" font-size="10">VID_0007.mp4</text>
+  <text x="22" y="133" class="g" font-size="9.5">Der Ordnername ist frei wählbar.</text>
+
+  <path class="pfeil" d="M320 84 L368 84" marker-end="url(#pf4)"/>
+  <text x="344" y="76" class="g" font-size="10" text-anchor="middle">Import</text>
+
+  <text x="384" y="12" class="g" font-size="10">Nachher – so liegt es in der Mediathek</text>
+  <rect class="akzentbox" x="384" y="20" width="284" height="120" rx="6"/>
+  <text x="398" y="46" class="m" font-size="10.5">mediathek\Ereignisse\</text>
+  <text x="414" y="66" class="m" font-size="10.5">2026-09_Urlaub Italien\</text>
+  <text x="430" y="84" class="m" font-size="9">20260910_090000_IMG_1001.HEIC</text>
+  <text x="430" y="100" class="m" font-size="9">20260910_091500_IMG_1002.HEIC</text>
+  <text x="430" y="116" class="m" font-size="9">20260912_101500_VID_0007.mp4</text>
+  <text x="398" y="133" class="g" font-size="9.5">Name unverändert, Dateien mit Datum davor.</text>
+
+  <text x="8" y="160" class="g" font-size="9.5">Lose Dateien, die direkt in der Inbox liegen, wandern weiterhin in die Monatsordner. Beides lässt sich in einem Durchgang mischen.</text>
+</svg>
+<figcaption><b>Bild 4:</b> Ein Unterordner in der Inbox wird zum Ereignisordner in der Mediathek.</figcaption>
+</figure>
+
+<div class="kasten gruen">
+  <div class="kopf">Praktisch bei Reisen über den Monatswechsel</div>
+  <p>Im Ereignisordner bleibt alles beisammen, auch wenn die Aufnahmen aus zwei Monaten stammen. Die zeitliche
+  Reihenfolge kommt trotzdem zustande, weil jede Datei ihr Datum im Namen trägt.</p>
+</div>
+
+<!-- ====================================================================== 5 -->
+<h2><span class="nr">5</span>Die Weboberfläche</h2>
+
+<p>Wer lieber in einem Fenster klickt, startet <code>Weboberflaeche starten.cmd</code>. Es öffnet sich eine Seite im
+Browser, auf der sich alles bedienen lässt. Dahinter läuft dasselbe Programm wie beim Doppelklick, nur eben mit
+Formular statt mit schwarzem Fenster.</p>
+
+<figure>
+<svg viewBox="0 0 672 310" role="img" aria-label="Schematischer Aufbau der Weboberfläche">
+  <rect class="rahmen" x="8" y="8" width="656" height="280" rx="8"/>
+
+  <rect x="24" y="24" width="624" height="52" rx="4" fill="#f5f8fa" stroke="#dfe5e9"/>
+  <text x="44" y="50" class="k" font-size="18">128</text>
+  <text x="44" y="66" class="g" font-size="9.5">In der Inbox</text>
+  <text x="244" y="50" class="k" font-size="18">7</text>
+  <text x="244" y="66" class="g" font-size="9.5">Ereignisordner</text>
+  <text x="444" y="50" class="k" font-size="18">9 341</text>
+  <text x="444" y="66" class="g" font-size="9.5">In der Mediathek</text>
+
+  <rect x="24" y="88" width="104" height="26" rx="4" fill="#14607a"/>
+  <text x="76" y="105" font-size="10.5" text-anchor="middle" fill="#ffffff">Import</text>
+  <rect class="rahmen" x="136" y="88" width="132" height="26" rx="4"/>
+  <text x="202" y="105" font-size="10.5" text-anchor="middle">Einstellungen</text>
+  <rect class="rahmen" x="276" y="88" width="112" height="26" rx="4"/>
+  <text x="332" y="105" font-size="10.5" text-anchor="middle">Protokolle</text>
+
+  <rect x="24" y="124" width="624" height="112" rx="4" fill="#ffffff" stroke="#dfe5e9"/>
+  <text x="36" y="143" class="g" font-size="9.5">Ereignisname</text>
+  <text x="240" y="143" class="g" font-size="9.5">Nur Dateien, die so anfangen</text>
+  <text x="448" y="143" class="g" font-size="9.5">Ordnerschema</text>
+  <rect class="rahmen" x="36" y="150" width="190" height="22" rx="3"/>
+  <rect class="rahmen" x="240" y="150" width="190" height="22" rx="3"/>
+  <rect class="rahmen" x="448" y="150" width="188" height="22" rx="3"/>
+  <text x="458" y="165" class="m" font-size="9.5">2026 \ 2026-09 \ Datei</text>
+
+  <rect class="rahmen" x="38" y="182" width="10" height="10" rx="2"/>
+  <text x="56" y="191" font-size="9.5">Unterordner der Inbox nach Datum einsortieren</text>
+  <rect class="rahmen" x="38" y="198" width="10" height="10" rx="2"/>
+  <text x="56" y="207" font-size="9.5">Endungsfilter abschalten</text>
+  <rect x="38" y="214" width="10" height="10" rx="2" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="56" y="223" font-size="9.5">Stattdessen die vorhandene Mediathek umsortieren</text>
+
+  <rect x="24" y="248" width="118" height="26" rx="4" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="83" y="265" font-size="10.5" text-anchor="middle" fill="#14607a">Vorschau</text>
+  <rect x="156" y="248" width="152" height="26" rx="4" fill="#e9edf0" stroke="#dfe5e9"/>
+  <text x="232" y="265" font-size="10.5" text-anchor="middle" class="g">Wirklich ausführen</text>
+  <text x="320" y="265" class="g" font-size="9.5">erst nach der Vorschau anklickbar</text>
+
+  <text x="8" y="302" class="g" font-size="9.5">Die Seite ist nur auf diesem Rechner erreichbar. Andere im Netzwerk kommen nicht heran.</text>
+</svg>
+<figcaption><b>Bild 5:</b> Schematischer Aufbau der Seite. Oben die aktuellen Zahlen, darunter die drei Reiter.</figcaption>
+</figure>
+
+<table>
+<thead><tr><th>Reiter</th><th>Wofür er da ist</th></tr></thead>
+<tbody>
+<tr><td>Import</td><td>Angaben für einen einzelnen Durchgang: Ereignisname, Namensfilter, Ordnerschema und drei
+Haken. Erst auf <em>Vorschau</em> klicken, dann wird <em>Wirklich ausführen</em> freigegeben, und auch dann kommt
+noch eine Rückfrage.</td></tr>
+<tr><td>Einstellungen</td><td>Dieselben Werte, die sonst in der Einstellungsdatei stehen, nur als Formular: die drei
+Ordner, das Ordnerschema, die Liste der Dateitypen. Vor jedem Speichern wird eine Sicherung der bisherigen Werte
+angelegt.</td></tr>
+<tr><td>Protokolle</td><td>Die Berichte der letzten Durchgänge, direkt lesbar, ohne im Explorer zu suchen.</td></tr>
+</tbody>
+</table>
+
+<div class="kasten gelb">
+  <div class="kopf">Zwei Dinge, die man wissen sollte</div>
+  <p>Das schwarze Fenster, das beim Start aufgeht, muss offen bleiben, solange Sie die Seite benutzen. Es ist das
+  Programm selbst. Zum Beenden schließen Sie das Fenster.</p>
+  <p>Der unterste Haken, <em>Stattdessen die vorhandene Mediathek umsortieren</em>, macht etwas anderes als die
+  beiden darüber: Er rührt die Inbox nicht an, sondern räumt die bereits einsortierten Dateien in ein anderes
+  Ordnerschema um und löscht dabei leer gewordene Ordner. Für den Alltag brauchen Sie ihn nicht.</p>
+</div>
+
+<!-- ====================================================================== 6 -->
+<h2><span class="nr">6</span>Wenn eine Datei schon vorhanden ist</h2>
+
+<p>Das Programm überschreibt grundsätzlich nichts. Trifft eine Datei auf einen Namen, den es in der Mediathek schon
+gibt, vergleicht es zuerst den Inhalt und entscheidet dann.</p>
+
+<figure>
+<svg viewBox="0 0 672 272" role="img" aria-label="Entscheidungsweg bei belegtem Zielnamen">
+  <defs>
+    <marker id="pf6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#14607a"/>
+    </marker>
+  </defs>
+
+  <rect class="akzentbox" x="236" y="8" width="200" height="34" rx="6"/>
+  <text x="336" y="30" font-size="10.5" text-anchor="middle">Datei soll einsortiert werden</text>
+  <path class="pfeil" d="M336 42 L336 58" marker-end="url(#pf6)"/>
+
+  <rect class="rahmen" x="236" y="62" width="200" height="44" rx="6"/>
+  <text x="248" y="80" font-size="10.5">Gibt es diesen Namen am</text>
+  <text x="248" y="95" font-size="10.5">Zielort schon?</text>
+
+  <path class="pfeil" d="M236 84 L150 84 L150 148" marker-end="url(#pf6)"/>
+  <text x="192" y="77" class="g" font-size="9.5" text-anchor="middle">nein</text>
+  <path class="pfeil" d="M436 84 L540 84 L540 116" marker-end="url(#pf6)"/>
+  <text x="486" y="77" class="g" font-size="9.5" text-anchor="middle">ja</text>
+
+  <rect class="rahmen" x="60" y="152" width="180" height="50" rx="6"/>
+  <text x="74" y="174" class="k" font-size="10.5">Wird verschoben</text>
+  <text x="74" y="190" class="g" font-size="9.5">Im Bericht: OK</text>
+
+  <rect class="rahmen" x="430" y="120" width="234" height="42" rx="6"/>
+  <text x="442" y="138" font-size="10.5">Ist der Inhalt identisch?</text>
+  <text x="442" y="153" class="g" font-size="9">der Inhalt wird vollständig geprüft</text>
+
+  <path class="pfeil" d="M478 162 L478 194" marker-end="url(#pf6)"/>
+  <text x="470" y="182" class="g" font-size="9.5" text-anchor="end">ja</text>
+  <path class="pfeil" d="M612 162 L612 194" marker-end="url(#pf6)"/>
+  <text x="604" y="182" class="g" font-size="9.5" text-anchor="end">nein</text>
+
+  <rect class="rahmen" x="398" y="196" width="160" height="60" rx="6"/>
+  <text x="410" y="216" class="k" font-size="10.5">Bleibt liegen</text>
+  <text x="410" y="232" class="g" font-size="9">Dublette, bleibt in der</text>
+  <text x="410" y="246" class="g" font-size="9">Inbox. Im Bericht: SKIP</text>
+
+  <rect class="rahmen" x="558" y="196" width="110" height="60" rx="6"/>
+  <text x="570" y="216" class="k" font-size="10.5">Zähler dran</text>
+  <text x="570" y="232" class="m" font-size="9">…_IMG_1001_1.JPG</text>
+  <text x="570" y="246" class="g" font-size="9">Im Bericht: OK</text>
+</svg>
+<figcaption><b>Bild 6:</b> Der Entscheidungsweg. Es gibt keinen Fall, in dem eine vorhandene Datei überschrieben
+wird.</figcaption>
+</figure>
+
+<p>Praktischer Nebeneffekt: Dieselbe Speicherkarte lässt sich gefahrlos zweimal importieren. Beim zweiten Mal erkennt
+das Programm die bereits vorhandenen Aufnahmen und lässt sie liegen.</p>
+
+<p>Eine Grenze hat der Vergleich: Er greift nur, wenn beide Dateien gleich heißen. Dieselbe Aufnahme unter einem
+völlig anderen Namen fällt nicht auf und wird ein zweites Mal einsortiert.</p>
+
+<!-- ====================================================================== 7 -->
+<h2><span class="nr">7</span>Wohin einsortiert wird</h2>
+
+<p>Voreingestellt ist ein Ordner je Jahr und darin einer je Monat. Wer es anders mag, stellt das Schema in der
+Weboberfläche unter <em>Einstellungen</em> um. Die Auswirkung sehen Sie hier:</p>
+
+<figure>
+<svg viewBox="0 0 672 168" role="img" aria-label="Die vier möglichen Ordnerschemata">
+  <rect class="akzentbox" x="8" y="8" width="158" height="132" rx="6"/>
+  <text x="22" y="32" class="k" font-size="11">Jahr und Monat</text>
+  <text x="22" y="48" class="g" font-size="9.5">Voreinstellung</text>
+  <text x="22" y="74" class="m" font-size="9.5">mediathek\</text>
+  <text x="36" y="92" class="m" font-size="9.5">2026\</text>
+  <text x="50" y="110" class="m" font-size="9.5">2026-09\</text>
+  <text x="64" y="128" class="m" font-size="9.5">Datei</text>
+
+  <rect class="rahmen" x="178" y="8" width="158" height="132" rx="6"/>
+  <text x="192" y="32" class="k" font-size="11">Nur Jahr</text>
+  <text x="192" y="48" class="g" font-size="9.5">wenige, große Ordner</text>
+  <text x="192" y="74" class="m" font-size="9.5">mediathek\</text>
+  <text x="206" y="92" class="m" font-size="9.5">2026\</text>
+  <text x="220" y="110" class="m" font-size="9.5">Datei</text>
+
+  <rect class="rahmen" x="348" y="8" width="158" height="132" rx="6"/>
+  <text x="362" y="32" class="k" font-size="11">Je Tag</text>
+  <text x="362" y="48" class="g" font-size="9.5">sehr viele Ordner</text>
+  <text x="362" y="74" class="m" font-size="9.5">mediathek\</text>
+  <text x="376" y="92" class="m" font-size="9.5">2026-09-10\</text>
+  <text x="390" y="110" class="m" font-size="9.5">Datei</text>
+
+  <rect class="rahmen" x="518" y="8" width="146" height="132" rx="6"/>
+  <text x="532" y="32" class="k" font-size="11">Ohne Unterordner</text>
+  <text x="532" y="48" class="g" font-size="9.5">alles auf einem Haufen</text>
+  <text x="532" y="74" class="m" font-size="9.5">mediathek\</text>
+  <text x="546" y="92" class="m" font-size="9.5">Datei</text>
+
+  <text x="8" y="160" class="g" font-size="9.5">Ereignisordner bleiben davon unberührt: Sie liegen immer unter mediathek\Ereignisse\, unabhängig vom gewählten Schema.</text>
+</svg>
+<figcaption><b>Bild 7:</b> Die vier möglichen Ablagen. Die Dateinamen sind in allen Fällen gleich.</figcaption>
+</figure>
+
+<!-- ====================================================================== 8 -->
+<h2><span class="nr">8</span>Der Bericht nach jedem Durchgang</h2>
+
+<p>Nach jedem echten Import entsteht im Ordner <code>protokolle\</code> eine Datei mit Datum und Uhrzeit im Namen.
+Darin stehen die verwendeten Einstellungen, eine Zusammenfassung und eine Zeile je Datei. Öffnen lässt sie sich mit
+jedem Texteditor, am bequemsten über den Reiter <em>Protokolle</em> in der Weboberfläche.</p>
+
+<table>
+<thead><tr><th>Eintrag</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><code>OK</code></td><td>Die Datei wurde umbenannt und einsortiert.</td></tr>
+<tr><td><code>SKIP</code></td><td>Die Datei wurde bewusst übergangen, der Grund steht daneben – meist eine Dublette
+oder ein fehlendes Datum. Sie liegt weiterhin in der Inbox.</td></tr>
+<tr><td><code>FEHLER</code></td><td>Bei dieser einen Datei ist etwas schiefgegangen, die Meldung steht daneben. Der
+Durchgang läuft trotzdem weiter.</td></tr>
+</tbody>
+</table>
+
+<p>In der Zusammenfassung zählt die Spalte „Übersprungen“ die Fehler mit. Nach einer Vorschau entsteht bewusst kein
+Bericht, weil nichts passiert ist.</p>
+
+<!-- ====================================================================== 9 -->
+<h2><span class="nr">9</span>Wenn etwas nicht klappt</h2>
+
+<table>
+<thead><tr><th>Das sehen Sie</th><th>Das steckt dahinter</th></tr></thead>
+<tbody>
+<tr><td>„ExifTool nicht gefunden“, das Fenster schließt sich gleich wieder</td><td>Das Hilfsprogramm, das die
+Aufnahmedaten ausliest, liegt nicht am erwarteten Ort. Der Pfad lässt sich in der Weboberfläche unter
+<em>Einstellungen</em> korrigieren.</td></tr>
+<tr><td>Die Seite im Browser lädt nicht mehr</td><td>Das schwarze Fenster wurde geschlossen. Einfach
+<code>Weboberflaeche starten.cmd</code> erneut starten; die Adresse ändert sich dabei.</td></tr>
+<tr><td>Eine Datei bleibt in der Inbox liegen</td><td>Entweder gehört ihr Dateityp nicht zur eingestellten Liste,
+oder sie ist als Dublette erkannt worden. Der Bericht nennt den Grund.</td></tr>
+<tr><td>Ein Screenshot hat ein unerwartetes Datum</td><td>Screenshots enthalten kein Aufnahmedatum. Verwendet wurde
+das Änderungsdatum der Datei – das kann beim Kopieren entstanden sein.</td></tr>
+<tr><td>Ein Video steht zwischen den falschen Fotos</td><td>Kann bei Aufnahmen aus einer anderen Zeitzone vorkommen.
+Die Umrechnung geht von der hiesigen Zeit aus.</td></tr>
+<tr><td>Beim Start erscheint eine Meldung zur Ausführungsrichtlinie</td><td>Tritt nur auf, wenn das Programm direkt
+statt über die Startsymbole aufgerufen wird. Die beiden <code>.cmd</code>-Symbole umgehen das.</td></tr>
+</tbody>
+</table>
+
+<div class="kasten gelb">
+  <div class="kopf">Bitte nicht von Hand in der Mediathek umbenennen</div>
+  <p>Das Programm erkennt seine eigenen Dateien am Datum im Namen. Wird dort von Hand umbenannt, kann dieselbe
+  Aufnahme bei einem späteren Import ein zweites Mal hineingeraten. Neue Dateien gehören immer in die Inbox, nie
+  direkt in die Mediathek.</p>
+</div>
+
+<!-- ===================================================================== 10 -->
+<h2 id="spickzettel"><span class="nr">10</span>Spickzettel</h2>
+
+<table>
+<thead><tr><th>Ich möchte …</th><th>… so geht es</th></tr></thead>
+<tbody>
+<tr><td>Fotos vom Handy einsortieren</td><td>Dateien nach <code>inbox\</code> kopieren, Doppelklick auf
+<code>Medien importieren.cmd</code></td></tr>
+<tr><td>Erst sehen, was passieren würde</td><td>Doppelklick auf <code>Vorschau (aendert nichts).cmd</code></td></tr>
+<tr><td>Alles per Formular bedienen</td><td>Doppelklick auf <code>Weboberflaeche starten.cmd</code>, Fenster offen
+lassen</td></tr>
+<tr><td>Einen Urlaub zusammenhalten</td><td>Ordner in der Inbox anlegen, zum Beispiel
+<code>2026-09_Urlaub Italien</code>, und füllen</td></tr>
+<tr><td>Nur die Drohnenbilder importieren</td><td>Weboberfläche, Reiter Import, Feld „Nur Dateien, die so anfangen“:
+<code>DJI_</code></td></tr>
+<tr><td>Die Mediathek auf eine andere Festplatte legen</td><td>Weboberfläche, Reiter Einstellungen, Feld
+Mediathek</td></tr>
+<tr><td>Nachsehen, was der letzte Durchgang getan hat</td><td>Weboberfläche, Reiter Protokolle – oder neueste Datei
+in <code>protokolle\</code> öffnen</td></tr>
+<tr><td>Weitere Dateitypen zulassen</td><td>Weboberfläche, Reiter Einstellungen, Bereich Dateitypen</td></tr>
+</tbody>
+</table>
+
+<h3>Die wichtigsten Ordner</h3>
+
+<table>
+<thead><tr><th>Ordner</th><th>Was darin liegt</th></tr></thead>
+<tbody>
+<tr><td><code>inbox\</code></td><td>Eingang. Alles Neue kommt hierhin. Nach dem Import liegt hier nur noch, was
+übersprungen wurde – der Bericht nennt den Grund. Leere Unterordner bleiben stehen und können von Hand gelöscht
+werden.</td></tr>
+<tr><td><code>mediathek\</code></td><td>Das geordnete Ergebnis. Hier nichts von Hand umbenennen.</td></tr>
+<tr><td><code>mediathek\Ereignisse\</code></td><td>Die benannten Ordner für Urlaube, Feiern, Projekte.</td></tr>
+<tr><td><code>protokolle\</code></td><td>Ein Bericht je Durchgang.</td></tr>
+</tbody>
+</table>
+
+<div class="kasten">
+  <div class="kopf">Drei Sätze, die alles Wichtige enthalten</div>
+  <p>Neues kommt in die Inbox, nie direkt in die Mediathek. Im Zweifel erst die Vorschau, sie ändert nichts.
+  Überschrieben wird nie – was nicht einsortiert wurde, liegt noch in der Inbox und steht mit Begründung im
+  Bericht.</p>
+</div>
+
+<p class="fuss">GoDigital Medienimport · Bebilderte Anleitung · Stand 25. September 2026 · Technische Fassung:
+<code>ANLEITUNG.md</code> im Projektordner</p>
+
+</body>
+</html>
