@@ -42,19 +42,25 @@ Wer lieber klickt als doppelklickt: **Weboberflaeche starten.cmd** öffnet eine 
 Browser, auf der sich alles bedienen lässt. Das schwarze Fenster, das dabei aufgeht, muss
 offen bleiben, solange die Seite benutzt wird. Zum Beenden das Fenster schließen.
 
-Ganz oben stehen drei Zahlen: Dateien in der Inbox, Ereignisordner und Dateien in der
-Mediathek. Fehlt ExifTool, erscheint dort ein Hinweis darauf.
+Ganz oben steht in einem Satz, was ansteht — etwa „2 Dateien warten in der Inbox" —, daneben
+die beiden Knöpfe **Vorschau** und **Wirklich ausführen**. Darunter drei Zahlen: Dateien in
+der Inbox, Ereignisordner und Dateien in der Mediathek; die Inbox-Kachel färbt sich, sobald
+dort etwas liegt. Fehlt ExifTool, erscheint darunter ein Hinweis darauf.
+
+Rechts oben wechselt ein Knopf zwischen heller und dunkler Darstellung. Ohne Zutun folgt die
+Seite der Windows-Einstellung. Ganz unten stehen die drei letzten Läufe; ein Klick darauf
+öffnet das zugehörige Protokoll.
 
 Die Seite hat drei Reiter:
 
 - **Import** sammelt die Angaben für einen einzelnen Lauf: Ereignisname, Namensfilter und
-  Ordnerschema, dazu drei Haken. Der erste sortiert die Unterordner der Inbox nach Datum
+  Ordnerschema, dazu drei Schalter. Der erste sortiert die Unterordner der Inbox nach Datum
   ein, statt sie zu Ereignissen zu machen. Der zweite schaltet den Endungsfilter ab und
   zieht dann auch Textdateien und XMP-Beidateien mit in die Mediathek. Der dritte macht
   etwas ganz anderes als die beiden: Er lässt die Inbox in Ruhe und sortiert stattdessen
   die vorhandene Mediathek um, genau wie `-Reorganisieren` in Abschnitt 7, inklusive
   Löschen leerer Ordner. Ist er gesetzt, sind Ereignisname, Namensfilter und die beiden
-  anderen Haken gesperrt; das Ordnerschema bleibt wählbar, denn danach wird umsortiert.
+  anderen Schalter gesperrt; das Ordnerschema bleibt wählbar, denn danach wird umsortiert.
   Die Rückfrage vor dem Start weist eigens auf die Löschung hin.
 
   Ein Klick auf **Vorschau** zeigt in einer Tabelle, welche Datei wohin wandern würde.

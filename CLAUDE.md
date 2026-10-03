@@ -355,6 +355,17 @@ statt nichts zu importieren – wer alle Haken entfernt, meint aber das Gegentei
 sitzt in `Set-EinstellungenObjekt` und zusätzlich in der Seite, damit der Knopf gar nicht
 erst aktiv ist.
 
+**Der Aufbau der Seite.** Oben ein Lageband: ein Satz zur Lage, darunter die drei
+Kennzahlen, rechts die beiden Lauf-Knöpfe. Sie sitzen bewusst dort und nicht mehr im
+Import-Reiter — der Riegel bleibt derselbe, `knopfImport` wird erst nach einer Vorschau
+scharf (`vorschauGesehen`). Alle Element-Kennungen haben die Umgestaltung unverändert
+überlebt; wer am Skriptteil arbeitet, kann sich weiter auf `lage`, `lagehinweis`,
+`knopfVorschau`, `knopfImport`, `laufstatus` und `ortMediathek` verlassen. Symbole stecken
+als Inline-SVG in der Seite, weil sie nichts von außen nachlädt. Der Hell/Dunkel-Knopf
+stempelt `data-theme` auf `<html>` und merkt sich die Wahl in `localStorage`; ohne
+gespeicherte Wahl gilt weiter die Systemeinstellung, und jede Farbe steht als Marke in
+`:root`, damit beide Fassungen dieselben Regeln benutzen.
+
 Vor jedem Überschreiben legt der Dienst `einstellungen.json.bak` an. Die Sicherung steht
 nicht unter Versionskontrolle und ist damit die Rücknahme zwischen zwei Commits.
 `ConvertTo-Json` maskiert unter PowerShell 5.1 Umlaute als `\uXXXX`; das wird
