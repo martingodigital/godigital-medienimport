@@ -69,6 +69,7 @@ Source: "..\config\einstellungen.vorlage.json"; DestDir: "{app}\config";  Flags:
 Source: "..\protokolle\GoDigital-Medienimport_Anleitung-bebildert.pdf"; DestDir: "{app}"; Flags: ignoreversion
 ; Laeuft zur Laufzeit aus {tmp}, wird nicht mitinstalliert.
 Source: "Entpacke-ExifTool.ps1"; Flags: dontcopy
+Source: "Schreibe-Einstellungen.ps1"; Flags: dontcopy
 
 [Dirs]
 Name: "{app}\protokolle"
@@ -88,11 +89,16 @@ Name: "{autodesktop}\{#AppName}";         Filename: "{app}\Weboberflaeche starte
 Type: filesandordirs; Name: "{app}\exiftool"
 Type: filesandordirs; Name: "{app}\config"
 
+[Run]
+Filename: "{app}\Weboberflaeche starten.cmd"; Description: "Weboberfläche jetzt starten";   WorkingDir: "{app}"; Flags: postinstall shellexec skipifsilent
+Filename: "{app}\GoDigital-Medienimport_Anleitung-bebildert.pdf"; Description: "Anleitung öffnen";   Flags: postinstall shellexec skipifsilent
+
 [Code]
 var
   OrdnerSeite: TInputDirWizardPage;
   ArchivPfad: String;
   VorhandenesExifTool: String;
+  EinstellungenBehalten: Boolean;
 
 procedure InitializeWizard;
 begin
@@ -115,6 +121,7 @@ begin
   OrdnerSeite.Values[1] := ExpandConstant('{%USERPROFILE}\Pictures\GoDigital Inbox');
   ArchivPfad := '';
   VorhandenesExifTool := '';
+  EinstellungenBehalten := False;
 end;
 
 function MediathekOrdner(Param: String): String;
@@ -270,23 +277,57 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Code: Integer;
-  Befehl: String;
+  Befehl, ExifZiel: String;
 begin
   if CurStep <> ssPostInstall then
     Exit;
 
-  // Der Nutzer hat eine vorhandene Installation gewaehlt: nichts entpacken.
   if VorhandenesExifTool <> '' then
-    Exit;
+  begin
+    // Der Nutzer hat eine vorhandene Installation gewaehlt: nichts entpacken,
+    // der Pfad wandert direkt in die Einstellungsdatei.
+    ExifZiel := VorhandenesExifTool;
+  end
+  else
+  begin
+    ExifZiel := ExpandConstant('{app}\exiftool\exiftool.exe');
+    ExtractTemporaryFile('Entpacke-ExifTool.ps1');
+    // Jeder Pfad in Anfuehrungszeichen: Zielordner und Archivpfad duerfen
+    // Leerzeichen und Umlaute enthalten.
+    Befehl := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Entpacke-ExifTool.ps1') + '"' +
+              ' -Archiv "' + ArchivPfad + '"' +
+              ' -Ziel "' + ExpandConstant('{app}\exiftool') + '"';
+    if (not Exec('powershell.exe', Befehl, '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
+      MsgBox('ExifTool ließ sich nicht entpacken (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
+             'Das Programm ist installiert, findet aber kein ExifTool. Tragen Sie in den' + #13#10 +
+             'Einstellungen der Weboberfläche den Pfad zu einer exiftool.exe ein.', mbError, MB_OK);
+  end;
 
-  ExtractTemporaryFile('Entpacke-ExifTool.ps1');
-  // Jeder Pfad in Anfuehrungszeichen: Zielordner und Archivpfad duerfen
-  // Leerzeichen und Umlaute enthalten.
-  Befehl := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Entpacke-ExifTool.ps1') + '"' +
-            ' -Archiv "' + ArchivPfad + '"' +
-            ' -Ziel "' + ExpandConstant('{app}\exiftool') + '"';
-  if (not Exec('powershell.exe', Befehl, '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
-    MsgBox('ExifTool ließ sich nicht entpacken (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
-           'Das Programm ist installiert, findet aber kein ExifTool. Tragen Sie in den' + #13#10 +
-           'Einstellungen der Weboberfläche den Pfad zu einer exiftool.exe ein.', mbError, MB_OK);
+  // Rueckgabe 2 heisst: Es gab schon eine Einstellungsdatei, sie bleibt stehen.
+  // Ein Update darf die Einstellungen des Nutzers nicht ueberschreiben.
+  ExtractTemporaryFile('Schreibe-Einstellungen.ps1');
+  Befehl := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Schreibe-Einstellungen.ps1') + '"' +
+            ' -Vorlage "'      + ExpandConstant('{app}\config\einstellungen.vorlage.json') + '"' +
+            ' -Ziel "'         + ExpandConstant('{app}\config\einstellungen.json') + '"' +
+            ' -Inbox "'        + InboxOrdner('') + '"' +
+            ' -Mediathek "'    + MediathekOrdner('') + '"' +
+            ' -Protokolle "'   + ExpandConstant('{app}\protokolle') + '"' +
+            ' -ExifToolPath "' + ExifZiel + '"';
+  if not Exec('powershell.exe', Befehl, '', SW_HIDE, ewWaitUntilTerminated, Code) then
+    Code := -1;
+  if Code = 2 then
+    EinstellungenBehalten := True
+  else if Code <> 0 then
+    MsgBox('Die Einstellungsdatei ließ sich nicht schreiben (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
+           'Sie können die Ordner nach dem Start in der Weboberfläche eintragen.', mbError, MB_OK);
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpFinished) and EinstellungenBehalten then
+    WizardForm.FinishedLabel.Caption :=
+      WizardForm.FinishedLabel.Caption + #13#10#13#10 +
+      'Auf diesem Rechner waren bereits Einstellungen vorhanden. Sie wurden beibehalten; ' +
+      'die im Assistenten gewählten Ordner gelten deshalb erst, wenn Sie sie in der ' +
+      'Weboberfläche eintragen.';
 end;
