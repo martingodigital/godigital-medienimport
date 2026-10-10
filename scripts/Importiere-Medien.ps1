@@ -374,6 +374,21 @@ if ($Reorganisieren) {
 
     $inboxAbs = (Resolve-Path -LiteralPath $Inbox).Path
 
+    # Liegt der Programmordner selbst in der Inbox, gehoeren seine Dateien nicht
+    # dazu. Sonst zaehlt und verschiebt der Import die eigene Installation mit -
+    # bei abgeschaltetem Endungsfilter samt ExifTool und den eigenen Skripten.
+    # Nur diese eine Richtung wird ausgeschlossen: Im Projektordner liegt die
+    # Inbox umgekehrt UNTER $Root, dort darf nichts uebergangen werden.
+    $programmOrdner = ""
+    $wurzel = $Root.TrimEnd('\')
+    $inboxOhne = $inboxAbs.TrimEnd('\')
+    if ($wurzel -ne $inboxOhne -and
+        $wurzel.StartsWith($inboxOhne + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $programmOrdner = $wurzel + '\'
+        Write-Host "Hinweis: Der Programmordner liegt in der Inbox und wird uebergangen." -ForegroundColor Yellow
+        Write-Host "         $wurzel" -ForegroundColor Yellow
+    }
+
     # Ein einziger ExifTool-Aufruf fuer die ganze Inbox, auch mit Unterordnern.
     # QuickTimeUTC=1 rechnet Videozeiten von UTC in Ortszeit um, sonst sortieren
     # sich Videos gegenueber Fotos desselben Tages um den Zeitzonenversatz falsch ein.
@@ -399,6 +414,11 @@ if ($Reorganisieren) {
             $dateiName  = $e.FileName
             $quellOrdner = ($e.Directory -replace '/','\').TrimEnd('\')
             $quelle      = Join-Path $quellOrdner $dateiName
+
+            # --- Eigener Programmordner ---------------------------------------
+            # Still uebergehen wie ein Nichttreffer des Endungsfilters: Ein
+            # Protokoll mit 500 Zeilen ExifTool nuetzt niemandem.
+            if ($programmOrdner -and $quelle.StartsWith($programmOrdner, [System.StringComparison]::OrdinalIgnoreCase)) { continue }
 
             # --- Namensfilter (leerer Praefix = alle Dateien) ----------------
             if ($Praefix -and ($dateiName -notmatch ("^" + [regex]::Escape($Praefix)))) { continue }

@@ -384,6 +384,15 @@ function Set-EinstellungenObjekt {
     if (Test-LiegtInnerhalb -Unten $mediathek -Oben $inbox) {
         throw "Die Mediathek darf nicht innerhalb der Inbox liegen: Der Import würde die bereits einsortierten Dateien sonst immer wieder einlesen."
     }
+    # Auch der Programmordner selbst darf nicht darin liegen: Der Import zaehlte
+    # und verarbeitete sonst seine eigene Installation mit, samt der rund 500
+    # Dateien von ExifTool.
+    if ($Root -ieq $inbox -or (Test-LiegtInnerhalb -Unten $Root -Oben $inbox)) {
+        throw "Das Programm selbst liegt in diesem Ordner ($Root). Als Inbox taugt er deshalb nicht: Der Import würde die eigene Installation mitlesen. Bitte einen Unterordner darunter wählen."
+    }
+    if ($Root -ieq $mediathek -or (Test-LiegtInnerhalb -Unten $Root -Oben $mediathek)) {
+        throw "Das Programm selbst liegt in diesem Ordner ($Root). Als Mediathek taugt er deshalb nicht: Beim Umsortieren würden die eigenen Ordner mitbehandelt."
+    }
 
     $neu = [ordered]@{
         Inbox                    = $inbox
@@ -427,12 +436,26 @@ function Get-Lage {
         $exif = [string]$roh.Konfig.ExifToolPath
     }
 
+    # Liegt der Programmordner in der Inbox, gehoeren seine Dateien nicht dazu -
+    # sonst stehen in der Lage die rund 500 Dateien von ExifTool als "warten in
+    # der Inbox". Der Motor uebergeht sie beim Import aus demselben Grund. Die
+    # Zahl wird also richtig, aber die Einstellung bleibt falsch: dafuer die
+    # Meldung programmInDerInbox, die die Seite als Warnung anzeigt.
+    $programmInDerInbox = (Test-LiegtInnerhalb -Unten $Root -Oben $pfade.Inbox)
+    $programmOrdner     = $Root.TrimEnd('\') + '\'
+
     $inboxDateien = 0
     $inboxOrdner  = @()
     $inboxDa = Test-Path -LiteralPath $pfade.Inbox -PathType Container
     if ($inboxDa) {
-        $inboxDateien = @(Get-ChildItem -LiteralPath $pfade.Inbox -File -Recurse -ErrorAction SilentlyContinue).Count
-        $inboxOrdner  = @(Get-ChildItem -LiteralPath $pfade.Inbox -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+        $dateien = @(Get-ChildItem -LiteralPath $pfade.Inbox -File -Recurse -ErrorAction SilentlyContinue)
+        $ordner  = @(Get-ChildItem -LiteralPath $pfade.Inbox -Directory -ErrorAction SilentlyContinue)
+        if ($programmInDerInbox) {
+            $dateien = @($dateien | Where-Object { -not $_.FullName.StartsWith($programmOrdner, [System.StringComparison]::OrdinalIgnoreCase) })
+            $ordner  = @($ordner  | Where-Object { -not ($_.FullName.TrimEnd('\') + '\').StartsWith($programmOrdner, [System.StringComparison]::OrdinalIgnoreCase) })
+        }
+        $inboxDateien = $dateien.Count
+        $inboxOrdner  = @($ordner | Select-Object -ExpandProperty Name)
     }
     $mediathekDateien = 0
     $mediathekDa = Test-Path -LiteralPath $pfade.Mediathek -PathType Container
@@ -451,6 +474,8 @@ function Get-Lage {
         protokolle         = $pfade.Protokolle
         exifTool           = $exif
         exifToolVorhanden  = (Test-Path -LiteralPath $exif -PathType Leaf)
+        programmInDerInbox = $programmInDerInbox
+        programmOrdner     = $Root
         festeOrdner        = @($PfadUeberschreibung.Keys)
     }
 }

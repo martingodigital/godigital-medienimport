@@ -138,7 +138,7 @@ end;
 
 function OrdnerSeiteGeprueft(): Boolean;
 var
-  Mediathek, Inbox: String;
+  Mediathek, Inbox, Ziel: String;
 begin
   Result := False;
   Mediathek := Trim(OrdnerSeite.Values[0]);
@@ -171,6 +171,30 @@ begin
   begin
     MsgBox('Die Mediathek darf nicht innerhalb der Inbox liegen.' + #13#10#13#10 +
            'Der Import würde die bereits einsortierten Dateien sonst immer wieder einlesen.', mbError, MB_OK);
+    Exit;
+  end;
+
+  // Der Installationsordner darf in keinem der beiden liegen. Sonst zaehlt und
+  // verarbeitet der Import die eigene Installation mit - bei abgeschaltetem
+  // Endungsfilter samt ExifTool und den eigenen Skripten. Umgekehrt ist es
+  // erlaubt: Inbox oder Mediathek unterhalb des Programmordners sind das alte,
+  // harmlose Layout.
+  Ziel := WizardDirValue;
+  if IstDerselbe(Ziel, Mediathek) or LiegtInnerhalb(Ziel, Mediathek) then
+  begin
+    MsgBox('In diesem Ordner wird das Programm selbst installiert:' + #13#10#13#10 +
+           Ziel + #13#10#13#10 +
+           'Als Mediathek taugt er deshalb nicht. Bitte einen Ordner wählen, der das Programm' + #13#10 +
+           'nicht enthält.', mbError, MB_OK);
+    Exit;
+  end;
+
+  if IstDerselbe(Ziel, Inbox) or LiegtInnerhalb(Ziel, Inbox) then
+  begin
+    MsgBox('In diesem Ordner wird das Programm selbst installiert:' + #13#10#13#10 +
+           Ziel + #13#10#13#10 +
+           'Als Inbox taugt er deshalb nicht: Der Import würde die eigenen Programmdateien' + #13#10 +
+           'mitlesen. Bitte einen Unterordner darunter wählen oder einen anderen Ordner.', mbError, MB_OK);
     Exit;
   end;
 

@@ -143,6 +143,10 @@
     margin-top: 5px; font: 12px/1.5 var(--mono); color: var(--leise);
     word-break: break-all;
   }
+  /* Zwei Pfade nebeneinander waeren nicht auseinanderzuhalten, deshalb je eine
+     Zeile. Der Zusatz zum letzten Lauf haengt sich an die Mediathek-Zeile. */
+  .lagemeta > span { display: block; }
+  .lagemeta > #letzterLauf { display: inline; }
   .lagetat { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
   .lagezahlen { display: flex; flex-wrap: wrap; border-top: 1px solid var(--linie); background: var(--senke); }
@@ -384,7 +388,7 @@
     <div class="lagekopf">
       <div class="lagetext">
         <div class="lagesatz ruht" id="lagesatz"><span class="punkt" aria-hidden="true"></span><span id="lagesatzText">Lage wird ermittelt …</span></div>
-        <div class="lagemeta" id="lagemeta"><span id="ortMediathek">Mediathek wird ermittelt …</span><span id="letzterLauf"></span></div>
+        <div class="lagemeta" id="lagemeta"><span id="ortInbox">Inbox wird ermittelt …</span><span id="ortMediathek">Mediathek wird ermittelt …<span id="letzterLauf"></span></span></div>
       </div>
       <div class="lagetat">
         <button class="zweit" id="knopfVorschau">Vorschau</button>
@@ -676,14 +680,17 @@ async function ladeLage() {
     var satz = lagesatz(l);
     el("lagesatzText").textContent = satz.text;
     el("lagesatz").className = "lagesatz" + (satz.ruht ? " ruht" : "");
-    el("ortMediathek").textContent = l.mediathek;
+    el("ortInbox").textContent = "Inbox: " + l.inbox;
+    el("ortMediathek").textContent = "Mediathek: " + l.mediathek;
 
     el("lage").innerHTML = "";
     el("lage").appendChild(kennzahl(l.inboxDateien, l.inboxDateien === 1 ? "Datei in der Inbox" : "Dateien in der Inbox", "inbox", l.inboxDateien > 0));
     el("lage").appendChild(kennzahl(l.inboxOrdner.length, "Ereignisordner", "ereignis", l.inboxOrdner.length > 0));
     el("lage").appendChild(kennzahl(l.mediathekDateien, "in der Mediathek", "mediathek", false));
 
-    if (!l.exifToolVorhanden) {
+    if (l.programmInDerInbox) {
+      hinweis(el("lagehinweis"), "warn", "Das Programm selbst liegt in der Inbox (" + l.programmOrdner + "). Seine eigenen Dateien werden beim Zählen und beim Import übergangen, aber als Inbox taugt der Ordner nicht. Unter Einstellungen besser einen Unterordner eintragen.");
+    } else if (!l.exifToolVorhanden) {
       hinweis(el("lagehinweis"), "fehler", "ExifTool liegt nicht unter " + l.exifTool + ". Ein Import bricht damit ab — den Pfad unter Einstellungen korrigieren.");
     } else if (!l.inboxVorhanden) {
       hinweis(el("lagehinweis"), "fehler", "Den Inbox-Ordner gibt es nicht: " + l.inbox);

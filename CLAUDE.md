@@ -191,6 +191,16 @@ Fallback-Reihenfolge des Datums ist `CreateDate` → `DateTimeOriginal` → `Mod
 und nötig, weil Screenshots und Messenger-Bilder oft gar kein EXIF haben; er wird im
 Protokoll als „Datum aus Dateisystem" vermerkt.
 
+**Der eigene Programmordner.** Liegt `$Root` innerhalb der Inbox, werden seine Dateien
+still übergangen und der Lauf gibt dazu einen Hinweis aus. Ohne diese Sperre zählt und
+verschiebt der Import seine eigene Installation mit – bei `-AlleDateien` samt ExifTool und
+den eigenen Skripten; geprüft, dabei landeten `perl532.dll` und `liesmich.txt` in
+`Ereignisse\Programm\`. Nur diese eine Richtung wird ausgeschlossen: Im Projektordner liegt
+die Inbox umgekehrt **unter** `$Root`, dort darf nichts übergangen werden. Dieselbe Regel
+steht im Assistenten (gegen `WizardDirValue`) und in `Set-EinstellungenObjekt`; `Get-Lage`
+rechnet die Dateien aus der Zählung heraus und meldet `programmInDerInbox`, damit die Seite
+warnen kann, statt eine stillschweigend richtige Zahl zu zeigen.
+
 **Bereits benannte Dateien.** Trägt der Dateiname schon einen Datumsvorsatz, gilt dieser
 als Aufnahmedatum und das Skript stellt keinen zweiten voran. Ohne diese Regel bekäme eine
 zurückgelegte Datei einen neuen Zielnamen, die Kollisionsprüfung liefe nie an, und
@@ -459,7 +469,9 @@ anderen liegt** – sonst läse der Import die Mediathek bei jedem Lauf noch ein
 legt beide Ordner probeweise an, damit ein fehlendes Laufwerk hier auffällt und nicht erst beim
 ersten Import. Dieselbe Verschachtelungsregel steckt in `Set-EinstellungenObjekt` der
 Weboberfläche (`Test-LiegtInnerhalb`): Was der Assistent verbietet, darf die Seite nicht
-hinterher wieder erlauben. Wer eine der beiden Stellen ändert, ändert beide.
+hinterher wieder erlauben. Wer eine der beiden Stellen ändert, ändert beide. Beide prüfen
+zusätzlich, dass der **Programmordner** nicht in Inbox oder Mediathek liegt – umgekehrt ist
+es erlaubt, Inbox und Mediathek unterhalb des Programmordners sind das alte, harmlose Layout.
 
 **Vorbelegt wird `{%USERPROFILE}\Pictures`, nicht der Bilderordner der Shell.** Den biegt OneDrive
 auf einen Synchronisationsordner um (auf dem Entwicklungsrechner `…\OneDrive\Bilder 1`), und eine
