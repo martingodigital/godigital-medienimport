@@ -16,3 +16,11 @@ protokolle/protokoll_*.md
 # Windows-Beifang
 Thumbs.db
 desktop.ini
+
+# Die eigene Einstellungsdatei gehoert zum Rechner, nicht ins Repository: sie
+# traegt absolute Pfade und greift vor den eingebauten Standardwerten. Versioniert
+# ist nur die Vorlage daneben.
+config/einstellungen.json
+
+# Das gebaute Setup.
+installer/ausgabe/
