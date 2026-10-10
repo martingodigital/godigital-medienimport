@@ -87,6 +87,20 @@ $standardErweiterungen = @(
     'mp4','mov','avi','mts','m2ts','m4v','mkv'
 )
 
+# Rueckfallkette fuer ExifTool, wortgleich mit dem Importskript. Bewusst kopiert:
+# die beiden Skripte bleiben voneinander unabhaengig, so wie $standardErweiterungen
+# ebenfalls zweimal steht. Wer sie aendert, aendert beide.
+function Get-ExifToolStandard {
+    param([string]$ProgrammWurzel)
+    $daneben = Join-Path $ProgrammWurzel "exiftool\exiftool.exe"
+    if (Test-Path -LiteralPath $daneben -PathType Leaf) { return $daneben }
+    $imPfad = Get-Command 'exiftool.exe' -CommandType Application -ErrorAction SilentlyContinue |
+              Select-Object -First 1 -ExpandProperty Source
+    if ($imPfad) { return $imPfad }
+    return "E:\Exiftool\exiftool.exe"
+}
+$standardExifTool = Get-ExifToolStandard -ProgrammWurzel $Root
+
 $Token = [guid]::NewGuid().ToString('N')
 
 # --- Antworten ---------------------------------------------------------------
@@ -283,7 +297,7 @@ function Get-EinstellungenObjekt {
         Erweiterungen            = $standardErweiterungen
         UnterordnerAlsEreignisse = $true
         EreignisOrdnerName       = "Ereignisse"
-        ExifToolPath             = "E:\Exiftool\exiftool.exe"
+        ExifToolPath             = $standardExifTool
         VideoZeitAlsOrtszeit     = $true
     }
     if ($k) {
@@ -294,6 +308,10 @@ function Get-EinstellungenObjekt {
             }
         }
     }
+    # Ein leerer ExifTool-Pfad steht so in der mitgelieferten Vorlage. Er darf den
+    # Standard nicht verdraengen, sonst zeigt die Seite ein leeres Feld an und der
+    # Nutzer muesste einen Pfad eintragen, den das Setup laengst eingerichtet hat.
+    if (-not [string]$werte['ExifToolPath']) { $werte['ExifToolPath'] = $standardExifTool }
     return [pscustomobject]@{
         werte       = $werte
         warnung     = $roh.Warnung
@@ -385,7 +403,7 @@ function Set-EinstellungenObjekt {
 function Get-Lage {
     $roh   = Get-KonfigRoh
     $pfade = Get-AktuellePfade -Konfig $roh.Konfig
-    $exif  = "E:\Exiftool\exiftool.exe"
+    $exif  = $standardExifTool
     if ($roh.Konfig -and ($roh.Konfig.PSObject.Properties.Name -contains 'ExifToolPath') -and $roh.Konfig.ExifToolPath) {
         $exif = [string]$roh.Konfig.ExifToolPath
     }
