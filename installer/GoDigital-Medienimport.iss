@@ -63,6 +63,8 @@ Source: "..\protokolle\GoDigital-Medienimport_Anleitung-bebildert.pdf"; DestDir:
 
 [Dirs]
 Name: "{app}\protokolle"
+Name: "{code:MediathekOrdner}"
+Name: "{code:InboxOrdner}"
 
 [Icons]
 Name: "{group}\Weboberfläche starten";    Filename: "{app}\Weboberflaeche starten.cmd";   WorkingDir: "{app}"
@@ -76,3 +78,113 @@ Name: "{autodesktop}\{#AppName}";         Filename: "{app}\Weboberflaeche starte
 ; Beides entsteht erst zur Laufzeit und wuerde sonst stehen bleiben.
 Type: filesandordirs; Name: "{app}\exiftool"
 Type: filesandordirs; Name: "{app}\config"
+
+[Code]
+var
+  OrdnerSeite: TInputDirWizardPage;
+
+procedure InitializeWizard;
+begin
+  OrdnerSeite := CreateInputDirPage(wpSelectDir,
+    'Ordner für Ihre Medien',
+    'Wo sollen die Bilder liegen?',
+    'Die Mediathek nimmt die fertig einsortierten Fotos und Videos auf. Sie wird mit der Zeit groß;' + #13#10 +
+    'viele legen sie deshalb auf eine zweite Festplatte.' + #13#10#13#10 +
+    'Die Inbox ist der Eingang: Dort legen Sie neue Fotos ab, die noch einsortiert werden sollen.' + #13#10#13#10 +
+    'Beide Ordner werden angelegt, falls es sie noch nicht gibt.',
+    False, '');
+  OrdnerSeite.Add('Mediathek');
+  OrdnerSeite.Add('Inbox');
+  // Bewusst {%USERPROFILE}\Pictures und nicht der Bilderordner der Shell: Den
+  // biegt OneDrive auf einen Synchronisationsordner um, und eine Mediathek mit
+  // mehreren Gigabyte hat in der Cloud nichts verloren, solange der Nutzer das
+  // nicht selbst waehlt. Wer es anders will, traegt auf dieser Seite seinen
+  // eigenen Ordner ein. (Eine Konstante {userpics} kennt Inno Setup ohnehin nicht.)
+  OrdnerSeite.Values[0] := ExpandConstant('{%USERPROFILE}\Pictures\GoDigital Mediathek');
+  OrdnerSeite.Values[1] := ExpandConstant('{%USERPROFILE}\Pictures\GoDigital Inbox');
+end;
+
+function MediathekOrdner(Param: String): String;
+begin
+  Result := Trim(OrdnerSeite.Values[0]);
+end;
+
+function InboxOrdner(Param: String): String;
+begin
+  Result := Trim(OrdnerSeite.Values[1]);
+end;
+
+#include "Ordnerpruefung.iss"
+
+function OrdnerSeiteGeprueft(): Boolean;
+var
+  Mediathek, Inbox: String;
+begin
+  Result := False;
+  Mediathek := Trim(OrdnerSeite.Values[0]);
+  Inbox     := Trim(OrdnerSeite.Values[1]);
+
+  if (Mediathek = '') or (Inbox = '') then
+  begin
+    MsgBox('Bitte tragen Sie beide Ordner ein.', mbError, MB_OK);
+    Exit;
+  end;
+
+  if IstDerselbe(Mediathek, Inbox) then
+  begin
+    MsgBox('Mediathek und Inbox dürfen nicht derselbe Ordner sein.' + #13#10#13#10 +
+           'Die Inbox ist der Eingang, die Mediathek das Ergebnis.', mbError, MB_OK);
+    Exit;
+  end;
+
+  // Die Weboberflaeche prueft nur auf Gleichheit. Liegt die Inbox in der
+  // Mediathek, liest der Import sie bei jedem Lauf mit und sortiert die
+  // Mediathek in sich selbst um.
+  if LiegtInnerhalb(Inbox, Mediathek) then
+  begin
+    MsgBox('Die Inbox darf nicht innerhalb der Mediathek liegen.' + #13#10#13#10 +
+           'Der Import würde die Mediathek sonst bei jedem Lauf noch einmal mitlesen.', mbError, MB_OK);
+    Exit;
+  end;
+
+  if LiegtInnerhalb(Mediathek, Inbox) then
+  begin
+    MsgBox('Die Mediathek darf nicht innerhalb der Inbox liegen.' + #13#10#13#10 +
+           'Der Import würde die bereits einsortierten Dateien sonst immer wieder einlesen.', mbError, MB_OK);
+    Exit;
+  end;
+
+  if not OrdnerBeschreibbar(Mediathek) then
+  begin
+    MsgBox('Der Ordner für die Mediathek lässt sich nicht anlegen oder nicht beschreiben:' + #13#10#13#10 +
+           Mediathek + #13#10#13#10 +
+           'Bitte prüfen Sie, ob das Laufwerk vorhanden ist, und wählen Sie einen anderen Ordner.', mbError, MB_OK);
+    Exit;
+  end;
+
+  if not OrdnerBeschreibbar(Inbox) then
+  begin
+    MsgBox('Der Ordner für die Inbox lässt sich nicht anlegen oder nicht beschreiben:' + #13#10#13#10 +
+           Inbox + #13#10#13#10 +
+           'Bitte wählen Sie einen anderen Ordner.', mbError, MB_OK);
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if CurPageID = OrdnerSeite.ID then
+    Result := OrdnerSeiteGeprueft();
+end;
+
+function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo,
+  MemoTypeInfo, MemoComponentsInfo, MemoGroupInfo, MemoTasksInfo: String): String;
+begin
+  Result := MemoDirInfo + NewLine + NewLine +
+            'Mediathek:' + NewLine + Space + MediathekOrdner('') + NewLine + NewLine +
+            'Inbox (Eingang):' + NewLine + Space + InboxOrdner('') + NewLine + NewLine +
+            MemoTasksInfo;
+end;
