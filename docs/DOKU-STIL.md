@@ -7,7 +7,7 @@ description: "Stil und Bauweise für bebilderte Anwenderdokumentation als PDF (H
 
 Kopie der Skill `anwenderdoku-pdf` aus `~/.claude/skills/anwenderdoku-pdf/SKILL.md`, Stand
 2026-09-25. Maßgeblich ist die Datei dort; diese Kopie liegt hier zum Nachlesen im Projekt.
-Nach dieser Vorlage ist `protokolle\GoDigital-Medienimport_Anleitung-bebildert.pdf` gebaut.
+Nach dieser Vorlage ist `docs\GoDigital-Medienimport_Anleitung-bebildert.pdf` gebaut.
 
 Für Dokumente, die jemand ohne Programmier- und IT-Kenntnisse allein verstehen soll. Die
 technische Fassung (README, CLAUDE.md, Entwicklerdoku) bleibt davon unberührt und wird nicht

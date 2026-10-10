@@ -35,13 +35,19 @@ noch Mediathek, auch nicht sein `archiv\`.
 | `scripts\Importiere-Medien.ps1` | Der Motor. Läuft eigenständig, kennt die Oberfläche nicht. |
 | `scripts\Starte-Weboberflaeche.ps1` | HTTP-Dienst auf 127.0.0.1, ruft den Motor als eigenen Prozess auf. |
 | `installer\` | **Installationsprogramm.** Inno-Setup-Quelle, Bauskript und zwei Hilfsskripte, die das Setup zur Laufzeit ruft. |
-| `docs\superpowers\` | Specs und Umsetzungspläne. Versioniert, kommt nicht ins Setup. |
+| `installer\GoDigital-Medienimport.svg` | Das Bildzeichen der Anwendung. Quelle des Icons, hier wird geändert. |
+| `installer\GoDigital-Medienimport.ico` | Daraus gebaut, neun Größen. Eingecheckt, weil der Bau Chrome braucht. |
+| `installer\Baue-Icon.ps1` | Macht aus der SVG die ICO. Läuft nur, wenn sich das Bildzeichen ändert. |
+| `.github\workflows\release.yml` | Baut das Setup bei einem Tag `v*` und hängt es an ein GitHub-Release. |
 | `web\index.html` | Die Oberfläche. Wird vom Dienst ausgeliefert, lädt nichts von außen. |
-| `protokolle\` | Ein Markdown-Protokoll pro echtem Lauf (`protokoll_<zeitstempel>.md`). |
-| `protokolle\…_Anleitung-bebildert.pdf` | Bebilderte Anwenderanleitung. Versioniert, anders als die Laufprotokolle daneben. |
-| `protokolle\…_Anleitung-bebildert.html` | Die Quelle dazu. Alle Zeichnungen stecken als SVG darin, nichts wird nachgeladen. |
-| `DOKU-STIL.md` | Kopie der Skill `anwenderdoku-pdf` (Stand 2026-09-25). Bauweise und Layout der bebilderten Anleitung. Maßgeblich bleibt die Skill-Datei. |
-| `.gitignore` | Hält Medien, Laufprotokolle und `.bak`-Kopien aus dem Repository. Ignoriert wird nur `protokolle\protokoll_*.md`, nicht der ganze Ordner: Anleitung und HTML-Quelle darin sind versioniert. |
+| `protokolle\` | Ein Markdown-Protokoll pro echtem Lauf (`protokoll_<zeitstempel>.md`). Reiner Laufzeitordner, nicht im Repository: das Importskript legt ihn selbst an. |
+| `docs\…_Anleitung-bebildert.pdf` | Bebilderte Anwenderanleitung. Versioniert; das Setup liefert sie mit und legt eine Verknüpfung ins Startmenü. |
+| `docs\…_Anleitung-bebildert.html` | Die Quelle dazu. Alle Zeichnungen stecken als SVG darin, nichts wird nachgeladen. |
+| `docs\DOKU-STIL.md` | Kopie der Skill `anwenderdoku-pdf` (Stand 2026-09-25). Bauweise und Layout der bebilderten Anleitung. Maßgeblich bleibt die Skill-Datei. |
+| `docs\weboberflaeche.png` | Der Screenshot im README. Entstanden gegen Wegwerf-Ordner, nicht gegen die echte Mediathek. |
+| `docs\superpowers\` | Specs und Umsetzungspläne. Nur lokal: `.gitignore` hält sie draußen, weil sie Pfade dieses Rechners tragen und niemandem helfen, der das Programm benutzt. |
+| `CHANGELOG.md` | Was sich je Fassung geändert hat. Die Nummer selbst steht weiterhin nur in `VERSION`. |
+| `.gitignore` | Hält Medien, die Laufzeitordner, `.bak`-Kopien, das gebaute Setup und die Entwicklungsunterlagen aus dem Repository. |
 | `Medien importieren.cmd` | **Doppelklick-Start** (ohne Claude). |
 | `Vorschau (aendert nichts).cmd` | Doppelklick-Vorschau (`-WhatIf`). |
 | `Weboberflaeche starten.cmd` | Doppelklick-Start der Oberfläche. Fenster muss offen bleiben. |
@@ -481,6 +487,26 @@ vollständig abbricht.
 
 Die `.iss` ist **UTF-8 mit BOM**, wie die Skripte: Ohne BOM zeigt der Assistent zerlegte Umlaute.
 
+**Das Icon hängt an drei Stellen.** `SetupIconFile` trägt es auf die `Setup.exe`,
+`UninstallDisplayIcon` auf den Eintrag in „Apps & Features", und `IconFilename` auf
+jede Verknüpfung. Das Letzte ist kein Schönheitsfix: Die Verknüpfungen zeigen auf
+`.cmd`-Dateien und erben sonst das Symbol der Eingabeaufforderung. Damit die beiden
+ersten greifen, muss die `.ico` mitinstalliert werden — ein `UninstallDisplayIcon`
+auf eine nach der Installation fehlende Datei zeigt wieder das leere Blatt (geprüft:
+nach einer stillen Installation steht der Pfad in der Registry unter
+`HKCU:\…\Uninstall` und die Datei liegt dort).
+
+Gebaut wird die `.ico` mit `installer\Baue-Icon.ps1` aus
+`installer\GoDigital-Medienimport.svg`. Geändert wird nur die SVG. Das Skript rendert
+**jede Größe einzeln** mit Chrome statt eine große herunterzuskalieren; nur so bleiben
+16 und 20 Pixel scharf, und genau die sieht man in der Taskleiste und in der
+Programmliste. Zwei Fallen stecken darin, beide kommentiert: Die Fenstergröße muss als
+eine Zeichenkette übergeben werden (`"--window-size=$g,$g"`), sonst macht PowerShell
+zwei Argumente daraus und Chrome nimmt die Größe aus seinem Profil. Und Chrome meldet
+den Erfolg auf stderr, was unter `$ErrorActionPreference = 'Stop'` einen Abbruch
+auslöst. Die Einträge sind PNG-komprimiert; `System.Drawing` liefert daraus die 256er
+Fassung nicht aus, Windows und der Explorer dagegen schon.
+
 ## Code-Konventionen
 
 - Das Skript ist **UTF-8 mit BOM**. Das BOM ist Pflicht, sonst liest Windows PowerShell 5.1
@@ -555,20 +581,30 @@ Die `.iss` ist **UTF-8 mit BOM**, wie die Skripte: Ohne BOM zeigt der Assistent 
   .NET-Methoden anders als PowerShell 7.
 - Ändert sich das Verhalten, `ANLEITUNG.md` mitziehen. Sie ist die Nutzerdoku und
   beschreibt dieselben Abläufe in nicht-technischer Sprache; sie darf nicht auseinanderlaufen.
-- Dasselbe gilt für die bebilderte Anleitung in `protokolle\`. Geändert wird die
+- Dasselbe gilt für die bebilderte Anleitung in `docs\`. Geändert wird die
   HTML-Quelle, daraus entsteht das PDF neu; das PDF selbst lässt sich nicht bearbeiten.
-  Stil und Aufbau stehen in `DOKU-STIL.md`:
+  Stil und Aufbau stehen in `docs\DOKU-STIL.md`:
 
   ```bash
   chrome.exe --headless=new --disable-gpu --no-pdf-header-footer \
     --print-to-pdf="GoDigital-Medienimport_Anleitung-bebildert.pdf" \
-    "file:///E:/GoDigital Medienimport/protokolle/GoDigital-Medienimport_Anleitung-bebildert.html"
+    "file:///E:/GoDigital Medienimport/docs/GoDigital-Medienimport_Anleitung-bebildert.html"
   ```
 
   Danach das PDF seitenweise rendern und ansehen (`pypdfium2`), sonst fallen abgeschnittene
   SVG-Beschriftungen und halb leere Seiten erst beim Leser auf. Der Umbruch ist eingestellt,
   nicht zufällig: Jede Zeichnung steht mit ihrer Bildunterschrift zusammen, und der
   Spickzettel bekommt als einziger Abschnitt einen erzwungenen Seitenumbruch.
+- Ändert sich das Aussehen der Oberfläche sichtbar, `docs\weboberflaeche.png` neu
+  aufnehmen. Dafür eine Wegwerf-Inbox und -Mediathek anlegen, den Dienst mit
+  `-Inbox`/`-Mediathek`/`-Protokolle` und einer eigenen `-EinstellungsDatei` darauf
+  starten und mit Chrome `--headless=new --screenshot` aufnehmen. Niemals gegen die
+  echte Mediathek: der Screenshot liegt öffentlich im README, und das Lageband zeigt
+  die vollen Pfade.
+- Eine neue Fassung bedeutet: `VERSION` ändern, `CHANGELOG.md` ergänzen, committen,
+  Tag `v<Version>` setzen und schieben. Den Rest macht
+  `.github\workflows\release.yml`; passen Tag und `VERSION` nicht zusammen, bricht
+  er ab.
 - `E:\Drohne-Foto-Workflow` nicht anfassen. Getrenntes, eingefrorenes Projekt.
 
 ## Voraussetzungen

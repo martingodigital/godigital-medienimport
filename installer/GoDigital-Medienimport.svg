@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 64 64">
+  <!--
+    Quelle des Programmsymbols GoDigital-Medienimport.ico.
+    Dasselbe Bildzeichen wie oben links in der Weboberflaeche (web\index.html),
+    auf dem Blau der Anwendung (Marke --stempel, #27489c).
+    Neu bauen mit installer\Baue-Icon.ps1.
+  -->
+  <rect width="64" height="64" rx="14" fill="#27489c"/>
+  <g fill="none" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="14" y="17" width="36" height="30" rx="4.5"/>
+    <path d="M16.5 42l9.5-9.5 6 6 6.5-6.5L47.5 42"/>
+  </g>
+  <circle cx="25" cy="27.5" r="2.9" fill="#ffffff"/>
+</svg>

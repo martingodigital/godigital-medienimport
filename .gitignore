@@ -4,9 +4,10 @@ inbox/*
 !inbox/.gitkeep
 mediathek/
 
-# Laufprotokolle entstehen bei jedem echten Import neu.
-# Die bebilderte Anwenderanleitung im selben Ordner bleibt versioniert.
-protokolle/protokoll_*.md
+# Laufzeitordner: ein Protokoll je echtem Import. Das Importskript legt den
+# Ordner selbst an, er muss also nicht im Repository stehen. Die bebilderte
+# Anwenderanleitung lag frueher hier und liegt jetzt in docs/.
+protokolle/
 
 # Sicherungskopien: einstellungen.json.bak legt die Weboberflaeche an,
 # Importiere-Medien.ps1.bak-<zeitstempel> die Handarbeit vor groesseren Eingriffen.
@@ -22,5 +23,10 @@ desktop.ini
 # ist nur die Vorlage daneben.
 config/einstellungen.json
 
-# Das gebaute Setup.
+# Das gebaute Setup. Veroeffentlicht wird es als Release-Datei, nicht hier.
 installer/ausgabe/
+
+# Arbeitsunterlagen der Entwicklung (Specs, Umsetzungsplaene, Fortschritt).
+# Sie tragen Pfade dieses Rechners und helfen niemandem, der das Programm nutzt.
+docs/superpowers/
+.superpowers/

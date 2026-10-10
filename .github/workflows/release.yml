@@ -1,0 +1,104 @@
+# Baut das Setup auf einem Windows-Runner und haengt es an ein GitHub-Release.
+#
+# Ausgeloest von einem Tag v<Version>, zum Beispiel v1.0.1. Die Nummer muss zu
+# VERSION im Projektordner passen, sonst bricht der Lauf ab: sonst traegt das
+# Release eine andere Nummer als die Datei darin.
+#
+# Von Hand startbar (workflow_dispatch). Dann entsteht kein Release, sondern nur
+# ein Artefakt zum Nachsehen, ob der Bau durchlaeuft.
+#
+# In den PowerShell-Schritten stehen bewusst keine Here-Strings: deren
+# Abschlusszeichen "@ muesste am Zeilenanfang stehen, und das geht in einem
+# eingerueckten YAML-Block nicht.
+
+name: Setup bauen und veroeffentlichen
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bauen:
+    runs-on: windows-latest
+
+    steps:
+      - name: Quellen holen
+        uses: actions/checkout@v4
+
+      - name: Version lesen und gegen den Tag pruefen
+        id: version
+        shell: pwsh
+        run: |
+          $version = ([System.IO.File]::ReadAllText("VERSION")).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Host "::error::VERSION enthaelt keine Nummer der Form 1.0.0, sondern '$version'."
+            exit 1
+          }
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $tag = $env:GITHUB_REF_NAME
+            if ($tag -ne "v$version") {
+              Write-Host "::error::Der Tag $tag passt nicht zu VERSION ($version). Erwartet wird v$version."
+              exit 1
+            }
+          }
+          Write-Host "Version: $version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Inno Setup installieren
+        shell: pwsh
+        run: choco install innosetup --no-progress --yes
+
+      - name: Setup bauen
+        shell: pwsh
+        run: .\installer\Baue-Setup.ps1
+
+      - name: Ergebnis als Artefakt sichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: Setup-${{ steps.version.outputs.version }}
+          path: |
+            installer/ausgabe/*.exe
+            installer/exiftool-fassung.txt
+          if-no-files-found: error
+
+      - name: Release anlegen
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $datei   = "installer\ausgabe\GoDigital-Medienimport-Setup-$version.exe"
+          if (-not (Test-Path -LiteralPath $datei)) {
+            Write-Host "::error::Die gebaute Datei fehlt: $datei"
+            exit 1
+          }
+
+          # Die Release-Notizen sind der Abschnitt dieser Fassung aus CHANGELOG.md.
+          $notizen = New-Object System.Collections.Generic.List[string]
+          $sammeln = $false
+          foreach ($zeile in [System.IO.File]::ReadAllLines("CHANGELOG.md")) {
+            if ($zeile -match ('^##\s+' + [regex]::Escape($version) + '\b')) { $sammeln = $true; continue }
+            if ($sammeln -and $zeile -match '^##\s') { break }
+            if ($sammeln) { $notizen.Add($zeile) }
+          }
+          $text = ($notizen -join "`n").Trim()
+          if (-not $text) { $text = "Siehe CHANGELOG.md." }
+
+          $hinweis = @(
+            ""
+            "---"
+            ""
+            "**Herunterladen:** die Datei ``GoDigital-Medienimport-Setup-$version.exe`` unten anklicken und starten."
+            "Windows zeigt dabei einmal den Hinweis ""Der Computer wurde durch Windows geschuetzt"" - dort auf"
+            "**Weitere Informationen** und dann auf **Trotzdem ausfuehren** klicken. Das Setup traegt keine"
+            "gekaufte Signatur, mehr steckt hinter der Meldung nicht."
+          ) -join "`n"
+
+          Set-Content -LiteralPath "release-notizen.md" -Value ($text + $hinweis) -Encoding utf8
+          gh release create $env:GITHUB_REF_NAME $datei --title "GoDigital Medienimport $version" --notes-file "release-notizen.md"

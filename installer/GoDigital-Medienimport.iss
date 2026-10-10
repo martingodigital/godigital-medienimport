@@ -45,6 +45,13 @@ WizardStyle=modern
 Compression=lzma2
 SolidCompression=yes
 UninstallDisplayName={#AppName}
+; Das Bildzeichen der Anwendung, gebaut aus GoDigital-Medienimport.svg mit
+; Baue-Icon.ps1. SetupIconFile traegt es auf die Setup.exe, UninstallDisplayIcon
+; auf den Eintrag in "Apps & Features" und in den Entfernen-Dialog. Dafuer muss
+; die Datei mitinstalliert werden, siehe [Files]: zeigt der Eintrag auf eine
+; Datei, die nach dem Installieren fehlt, zeigt Windows wieder das leere Blatt.
+SetupIconFile=GoDigital-Medienimport.ico
+UninstallDisplayIcon={app}\GoDigital-Medienimport.ico
 
 [Languages]
 Name: "de"; MessagesFile: "compiler:Languages\German.isl"
@@ -66,7 +73,10 @@ Source: "..\ANLEITUNG.md";                      DestDir: "{app}";         Flags:
 Source: "..\VERSION";                           DestDir: "{app}";         Flags: ignoreversion
 Source: "..\LICENSE";                           DestDir: "{app}";         Flags: ignoreversion
 Source: "..\config\einstellungen.vorlage.json"; DestDir: "{app}\config";  Flags: ignoreversion
-Source: "..\protokolle\GoDigital-Medienimport_Anleitung-bebildert.pdf"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\GoDigital-Medienimport_Anleitung-bebildert.pdf"; DestDir: "{app}"; Flags: ignoreversion
+; Traegt die Verknuepfungen und den Eintrag in "Apps & Features". Ohne diese
+; Datei im Zielordner greifen UninstallDisplayIcon und IconFilename ins Leere.
+Source: "GoDigital-Medienimport.ico";          DestDir: "{app}";         Flags: ignoreversion
 ; Laeuft zur Laufzeit aus {tmp}, wird nicht mitinstalliert.
 Source: "Entpacke-ExifTool.ps1"; Flags: dontcopy
 Source: "Schreibe-Einstellungen.ps1"; Flags: dontcopy
@@ -77,12 +87,16 @@ Name: "{code:MediathekOrdner}"; Flags: uninsneveruninstall
 Name: "{code:InboxOrdner}"; Flags: uninsneveruninstall
 
 [Icons]
-Name: "{group}\Weboberfläche starten";    Filename: "{app}\Weboberflaeche starten.cmd";   WorkingDir: "{app}"
-Name: "{group}\Medien importieren";       Filename: "{app}\Medien importieren.cmd";       WorkingDir: "{app}"
-Name: "{group}\Vorschau (ändert nichts)"; Filename: "{app}\Vorschau (aendert nichts).cmd"; WorkingDir: "{app}"
+; IconFilename ist bei den Verknuepfungen noetig, weil sie auf .cmd-Dateien
+; zeigen: ohne Angabe erbt die Verknuepfung das Symbol der Eingabeaufforderung.
+; Die Anleitung behaelt bewusst das Symbol des PDF-Lesers, und der Eintrag zum
+; Entfernen das von Inno Setup erzeugte.
+Name: "{group}\Weboberfläche starten";    Filename: "{app}\Weboberflaeche starten.cmd";   WorkingDir: "{app}"; IconFilename: "{app}\GoDigital-Medienimport.ico"
+Name: "{group}\Medien importieren";       Filename: "{app}\Medien importieren.cmd";       WorkingDir: "{app}"; IconFilename: "{app}\GoDigital-Medienimport.ico"
+Name: "{group}\Vorschau (ändert nichts)"; Filename: "{app}\Vorschau (aendert nichts).cmd"; WorkingDir: "{app}"; IconFilename: "{app}\GoDigital-Medienimport.ico"
 Name: "{group}\Anleitung";                Filename: "{app}\GoDigital-Medienimport_Anleitung-bebildert.pdf"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}";         Filename: "{app}\Weboberflaeche starten.cmd";   WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}";         Filename: "{app}\Weboberflaeche starten.cmd";   WorkingDir: "{app}"; IconFilename: "{app}\GoDigital-Medienimport.ico"; Tasks: desktopicon
 
 [UninstallDelete]
 ; Beides entsteht erst zur Laufzeit und wuerde sonst stehen bleiben.
