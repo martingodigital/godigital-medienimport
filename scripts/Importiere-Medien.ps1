@@ -93,6 +93,23 @@ if (-not $EinstellungsDatei) { $EinstellungsDatei = Join-Path $Root "config\eins
 
 $start = Get-Date
 
+# --- Programmversion ---------------------------------------------------------
+# Die Nummer steht ausschliesslich in VERSION. Fehlt die Datei - etwa in einem
+# unvollstaendig kopierten Ordner -, laeuft der Import weiter und meldet
+# "unbekannt"; eine fehlende Versionsdatei ist kein Grund, nichts zu tun.
+# Bewusst ueber System.IO: Get-Content meldet unter PowerShell 5.1 bei -WhatIf
+# seine Provider-Zugriffe und verrauscht die Vorschau.
+function Get-Programmversion {
+    param([string]$Pfad)
+    if (-not (Test-Path -LiteralPath $Pfad -PathType Leaf)) { return "unbekannt" }
+    try {
+        $zeile = ([System.IO.File]::ReadAllText($Pfad)).Trim()
+        if ($zeile) { return $zeile }
+    } catch { }
+    return "unbekannt"
+}
+$Programmversion = Get-Programmversion -Pfad (Join-Path $Root "VERSION")
+
 # --- Eingebaute Standardwerte (greifen ohne Einstellungsdatei) ---------------
 $standardErweiterungen = @(
     'jpg','jpeg','heic','heif','png','tif','tiff',
@@ -481,6 +498,8 @@ $md = New-Object System.Text.StringBuilder
 [void]$md.AppendLine("")
 [void]$md.AppendLine("- **Start:** $($start.ToString('yyyy-MM-dd HH:mm:ss'))")
 [void]$md.AppendLine("- **Ende:**  $($ende.ToString('yyyy-MM-dd HH:mm:ss'))")
+[void]$md.AppendLine("- **Programmversion:** $Programmversion")
+[void]$md.AppendLine("- **ExifTool:** ``$ExifToolPath``")
 [void]$md.AppendLine("- **Mediathek:** ``$Mediathek``")
 if (-not $Reorganisieren) {
     $textNamensfilter = if ($Praefix) { '`' + $Praefix + '`' } else { 'keiner (alle Dateien)' }
