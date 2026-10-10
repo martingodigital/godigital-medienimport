@@ -9,6 +9,13 @@
   #define AppVersion "0.0.0-handbetrieb"
 #endif
 
+#ifndef ExifToolVersion
+  #define ExifToolVersion "unbekannt"
+  #define ExifToolDatei "exiftool.zip"
+  #define ExifToolUrl ""
+  #define ExifToolHash ""
+#endif
+
 #define AppName "GoDigital Medienimport"
 #define AppPublisher "Martin Goßner GoDigital"
 #define AppUrl "https://github.com/martingodigital/godigital-medienimport"
@@ -60,6 +67,8 @@ Source: "..\VERSION";                           DestDir: "{app}";         Flags:
 Source: "..\LICENSE";                           DestDir: "{app}";         Flags: ignoreversion
 Source: "..\config\einstellungen.vorlage.json"; DestDir: "{app}\config";  Flags: ignoreversion
 Source: "..\protokolle\GoDigital-Medienimport_Anleitung-bebildert.pdf"; DestDir: "{app}"; Flags: ignoreversion
+; Laeuft zur Laufzeit aus {tmp}, wird nicht mitinstalliert.
+Source: "Entpacke-ExifTool.ps1"; Flags: dontcopy
 
 [Dirs]
 Name: "{app}\protokolle"
@@ -82,6 +91,8 @@ Type: filesandordirs; Name: "{app}\config"
 [Code]
 var
   OrdnerSeite: TInputDirWizardPage;
+  ArchivPfad: String;
+  VorhandenesExifTool: String;
 
 procedure InitializeWizard;
 begin
@@ -102,6 +113,8 @@ begin
   // eigenen Ordner ein. (Eine Konstante {userpics} kennt Inno Setup ohnehin nicht.)
   OrdnerSeite.Values[0] := ExpandConstant('{%USERPROFILE}\Pictures\GoDigital Mediathek');
   OrdnerSeite.Values[1] := ExpandConstant('{%USERPROFILE}\Pictures\GoDigital Inbox');
+  ArchivPfad := '';
+  VorhandenesExifTool := '';
 end;
 
 function MediathekOrdner(Param: String): String;
@@ -187,4 +200,93 @@ begin
             'Mediathek:' + NewLine + Space + MediathekOrdner('') + NewLine + NewLine +
             'Inbox (Eingang):' + NewLine + Space + InboxOrdner('') + NewLine + NewLine +
             MemoTasksInfo;
+end;
+
+function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
+begin
+  if ProgressMax > 0 then
+    WizardForm.StatusLabel.Caption := 'ExifTool {#ExifToolVersion} wird geladen: ' +
+      IntToStr(Progress div 1024) + ' von ' + IntToStr(ProgressMax div 1024) + ' KB';
+  Result := True;
+end;
+
+function VorhandeneExifToolDateiWaehlen(): Boolean;
+var
+  Pfad: String;
+begin
+  Result := False;
+  Pfad := '';
+  if GetOpenFileName('exiftool.exe auswählen', Pfad, '', 'Programme (*.exe)|*.exe|Alle Dateien (*.*)|*.*', 'exe') then
+  begin
+    if FileExists(Pfad) then
+    begin
+      VorhandenesExifTool := Pfad;
+      Result := True;
+    end;
+  end;
+end;
+
+// Bewusst PrepareToInstall und keine eigene Downloadseite an wpReady: Dieser
+// Haken laeuft auch bei einer stillen Installation (/VERYSILENT), die gar keine
+// Assistentenseiten durchlaeuft. Sonst entstuende dort eine Installation ohne
+// ExifTool. Die Pruefsumme prueft DownloadTemporaryFile selbst; stimmt sie
+// nicht, wirft es eine Ausnahme und es wird nichts entpackt.
+// Ein nicht leerer Rueckgabewert bricht die Installation sauber ab, statt etwas
+// Halbfertiges zu hinterlassen.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Fertig: Boolean;
+begin
+  Result := '';
+  Fertig := False;
+  repeat
+    try
+      DownloadTemporaryFile('{#ExifToolUrl}', '{#ExifToolDatei}', '{#ExifToolHash}', @OnDownloadProgress);
+      ArchivPfad := ExpandConstant('{tmp}\{#ExifToolDatei}');
+      Fertig := True;
+    except
+      if WizardSilent then
+        Result := 'ExifTool ließ sich nicht laden: ' + GetExceptionMessage
+      else if MsgBox('ExifTool ließ sich nicht laden, oder die geladene Datei stimmt nicht mit der erwarteten überein.' + #13#10#13#10 +
+                     GetExceptionMessage + #13#10#13#10 +
+                     'Möchten Sie es noch einmal versuchen?', mbError, MB_YESNO) = IDNO then
+      begin
+        if MsgBox('Haben Sie ExifTool bereits auf diesem Rechner?' + #13#10#13#10 +
+                  'Dann können Sie die Datei exiftool.exe jetzt auswählen. Andernfalls wird die' + #13#10 +
+                  'Installation abgebrochen; es bleibt nichts Halbfertiges zurück.', mbConfirmation, MB_YESNO) = IDYES then
+        begin
+          if VorhandeneExifToolDateiWaehlen() then
+            Fertig := True
+          else
+            Result := 'Es wurde keine exiftool.exe ausgewählt.';
+        end
+        else
+          Result := 'ExifTool wurde nicht geladen. Ohne ExifTool kann das Programm das Aufnahmedatum nicht aus den Fotos lesen.';
+      end;
+    end;
+  until Fertig or (Result <> '');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Code: Integer;
+  Befehl: String;
+begin
+  if CurStep <> ssPostInstall then
+    Exit;
+
+  // Der Nutzer hat eine vorhandene Installation gewaehlt: nichts entpacken.
+  if VorhandenesExifTool <> '' then
+    Exit;
+
+  ExtractTemporaryFile('Entpacke-ExifTool.ps1');
+  // Jeder Pfad in Anfuehrungszeichen: Zielordner und Archivpfad duerfen
+  // Leerzeichen und Umlaute enthalten.
+  Befehl := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Entpacke-ExifTool.ps1') + '"' +
+            ' -Archiv "' + ArchivPfad + '"' +
+            ' -Ziel "' + ExpandConstant('{app}\exiftool') + '"';
+  if (not Exec('powershell.exe', Befehl, '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
+    MsgBox('ExifTool ließ sich nicht entpacken (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
+           'Das Programm ist installiert, findet aber kein ExifTool. Tragen Sie in den' + #13#10 +
+           'Einstellungen der Weboberfläche den Pfad zu einer exiftool.exe ein.', mbError, MB_OK);
 end;
