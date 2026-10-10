@@ -44,3 +44,15 @@ begin
     Result := True;
   end;
 end;
+
+// Ein Pfad, der auf einen Backslash endet, darf so nicht in Anfuehrungszeichen an
+// ein Programm gehen: Windows liest \" als maskiertes Anfuehrungszeichen, der
+// Wert frisst dann alles bis zum naechsten Quote und die folgenden Parameter fehlen.
+// Wer im Durchsuchen-Dialog ein Laufwerk selbst anklickt, bekommt genau so einen
+// Pfad ("D:\"). Der letzte Backslash wird deshalb verdoppelt.
+function FuerBefehlszeile(const Pfad: String): String;
+begin
+  Result := Pfad;
+  if (Length(Result) > 0) and (Result[Length(Result)] = '\') then
+    Result := Result + '\';
+end;

@@ -324,6 +324,10 @@ vorhanden ist.
 
 Rückwärtsstriche in Pfaden müssen in JSON doppelt geschrieben werden: `D:\\Fotoarchiv`.
 
+Inbox und Mediathek dürfen nicht derselbe Ordner sein, und keiner der beiden darf im anderen
+liegen – sonst würde das Programm die bereits einsortierten Bilder bei jedem Durchgang noch
+einmal einlesen. Die Weboberfläche lehnt solche Angaben beim Speichern ab und sagt, warum.
+
 Eine leere Liste `"Erweiterungen": []` schaltet den Endungsfilter ab und wirkt wie
 `-AlleDateien` – nicht etwa umgekehrt. Wer die eingebaute Liste will, lässt den Schlüssel
 ganz weg. Aus demselben Grund lässt sich über die Weboberfläche nicht speichern, solange

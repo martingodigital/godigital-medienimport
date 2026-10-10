@@ -101,6 +101,16 @@ function Get-ExifToolStandard {
 }
 $standardExifTool = Get-ExifToolStandard -ProgrammWurzel $Root
 
+# Liegt Unten innerhalb von Oben? Dieselbe Regel wie im Installationsassistenten
+# (installer\Ordnerpruefung.iss). Der Backslash am Ende ist wichtig: ohne ihn
+# gaelte C:\Bilder2 als Unterordner von C:\Bilder.
+function Test-LiegtInnerhalb {
+    param([string]$Unten, [string]$Oben)
+    $u = ($Unten.Trim().TrimEnd('\') + '\').ToLowerInvariant()
+    $o = ($Oben.Trim().TrimEnd('\') + '\').ToLowerInvariant()
+    return ($u.Length -gt $o.Length -and $u.StartsWith($o))
+}
+
 $Token = [guid]::NewGuid().ToString('N')
 
 # --- Antworten ---------------------------------------------------------------
@@ -364,6 +374,15 @@ function Set-EinstellungenObjekt {
     }
     if ($inbox -ieq $mediathek) {
         throw "Inbox und Mediathek dürfen nicht derselbe Ordner sein."
+    }
+    # Verschachtelung ist genauso schaedlich wie Gleichheit, nur unauffaelliger:
+    # Der Import liest den inneren Ordner bei jedem Lauf mit. Der Assistent des
+    # Installationsprogramms lehnt das ab, die Seite darf es nicht wieder erlauben.
+    if (Test-LiegtInnerhalb -Unten $inbox -Oben $mediathek) {
+        throw "Die Inbox darf nicht innerhalb der Mediathek liegen: Der Import würde die Mediathek sonst bei jedem Lauf noch einmal mitlesen."
+    }
+    if (Test-LiegtInnerhalb -Unten $mediathek -Oben $inbox) {
+        throw "Die Mediathek darf nicht innerhalb der Inbox liegen: Der Import würde die bereits einsortierten Dateien sonst immer wieder einlesen."
     }
 
     $neu = [ordered]@{

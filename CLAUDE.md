@@ -356,7 +356,7 @@ den Motor weiter, damit Anzeige und Lauf nie auseinanderlaufen können.
 
 Beim Speichern prüft `Set-EinstellungenObjekt` die Ordner: die Inbox muss existieren, bei
 Mediathek und Protokolle reicht ein vorhandener Elternordner (den Rest legt der Motor an),
-und Inbox und Mediathek dürfen nicht derselbe Ordner sein. Schlägt eine Prüfung fehl, wird
+und Inbox und Mediathek dürfen weder derselbe Ordner sein noch ineinanderliegen. Schlägt eine Prüfung fehl, wird
 gar nichts geschrieben; die Datei bleibt auf ihrem letzten gültigen Stand (geprüft).
 
 **Die Oberfläche weigert sich, eine leere Dateityp-Liste zu speichern.** Nach dem oben
@@ -454,10 +454,12 @@ bedienen, dieselben Funktionen laufen so aber aus einem Wegwerf-Setup heraus geg
 Fallliste. Die Datei ist ASCII ohne BOM und kommentiert mit `//` – innerhalb von `[Code]` gilt
 Pascal, ein `;`-Kommentar bricht den Compiler mit „BEGIN expected" ab.
 
-Die Ordnerseite prüft mehr als die Weboberfläche: Dort ist nur verboten, dass Inbox und
-Mediathek derselbe Ordner sind. Der Assistent lehnt zusätzlich ab, dass einer im anderen liegt
-– sonst läse der Import die Mediathek bei jedem Lauf noch einmal mit – und legt beide Ordner
-probeweise an, damit ein fehlendes Laufwerk hier auffällt und nicht erst beim ersten Import.
+Die Ordnerseite lehnt ab, dass Inbox und Mediathek derselbe Ordner sind **oder einer im
+anderen liegt** – sonst läse der Import die Mediathek bei jedem Lauf noch einmal mit –, und sie
+legt beide Ordner probeweise an, damit ein fehlendes Laufwerk hier auffällt und nicht erst beim
+ersten Import. Dieselbe Verschachtelungsregel steckt in `Set-EinstellungenObjekt` der
+Weboberfläche (`Test-LiegtInnerhalb`): Was der Assistent verbietet, darf die Seite nicht
+hinterher wieder erlauben. Wer eine der beiden Stellen ändert, ändert beide.
 
 **Vorbelegt wird `{%USERPROFILE}\Pictures`, nicht der Bilderordner der Shell.** Den biegt OneDrive
 auf einen Synchronisationsordner um (auf dem Entwicklungsrechner `…\OneDrive\Bilder 1`), und eine

@@ -72,9 +72,9 @@ Source: "Entpacke-ExifTool.ps1"; Flags: dontcopy
 Source: "Schreibe-Einstellungen.ps1"; Flags: dontcopy
 
 [Dirs]
-Name: "{app}\protokolle"
-Name: "{code:MediathekOrdner}"
-Name: "{code:InboxOrdner}"
+Name: "{app}\protokolle"; Flags: uninsneveruninstall
+Name: "{code:MediathekOrdner}"; Flags: uninsneveruninstall
+Name: "{code:InboxOrdner}"; Flags: uninsneveruninstall
 
 [Icons]
 Name: "{group}\Weboberfläche starten";    Filename: "{app}\Weboberflaeche starten.cmd";   WorkingDir: "{app}"
@@ -252,7 +252,15 @@ begin
       ArchivPfad := ExpandConstant('{tmp}\{#ExifToolDatei}');
       Fertig := True;
     except
-      if WizardSilent then
+      // Update ohne Internet: Liegt aus einer frueheren Installation schon ein
+      // ExifTool im Programmordner, bleibt es einfach stehen. Sonst scheiterte
+      // jedes Update an der Leitung, obwohl alles Noetige da ist.
+      if FileExists(ExpandConstant('{app}\exiftool\exiftool.exe')) then
+      begin
+        VorhandenesExifTool := ExpandConstant('{app}\exiftool\exiftool.exe');
+        Fertig := True;
+      end
+      else if WizardSilent then
         Result := 'ExifTool ließ sich nicht laden: ' + GetExceptionMessage
       else if MsgBox('ExifTool ließ sich nicht laden, oder die geladene Datei stimmt nicht mit der erwarteten überein.' + #13#10#13#10 +
                      GetExceptionMessage + #13#10#13#10 +
@@ -295,8 +303,8 @@ begin
     // Jeder Pfad in Anfuehrungszeichen: Zielordner und Archivpfad duerfen
     // Leerzeichen und Umlaute enthalten.
     Befehl := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Entpacke-ExifTool.ps1') + '"' +
-              ' -Archiv "' + ArchivPfad + '"' +
-              ' -Ziel "' + ExpandConstant('{app}\exiftool') + '"';
+              ' -Archiv "' + FuerBefehlszeile(ArchivPfad) + '"' +
+              ' -Ziel "' + FuerBefehlszeile(ExpandConstant('{app}\exiftool')) + '"';
     if (not Exec('powershell.exe', Befehl, '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
       MsgBox('ExifTool ließ sich nicht entpacken (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
              'Das Programm ist installiert, findet aber kein ExifTool. Tragen Sie in den' + #13#10 +
@@ -307,12 +315,12 @@ begin
   // Ein Update darf die Einstellungen des Nutzers nicht ueberschreiben.
   ExtractTemporaryFile('Schreibe-Einstellungen.ps1');
   Befehl := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Schreibe-Einstellungen.ps1') + '"' +
-            ' -Vorlage "'      + ExpandConstant('{app}\config\einstellungen.vorlage.json') + '"' +
-            ' -Ziel "'         + ExpandConstant('{app}\config\einstellungen.json') + '"' +
-            ' -Inbox "'        + InboxOrdner('') + '"' +
-            ' -Mediathek "'    + MediathekOrdner('') + '"' +
-            ' -Protokolle "'   + ExpandConstant('{app}\protokolle') + '"' +
-            ' -ExifToolPath "' + ExifZiel + '"';
+            ' -Vorlage "'      + FuerBefehlszeile(ExpandConstant('{app}\config\einstellungen.vorlage.json')) + '"' +
+            ' -Ziel "'         + FuerBefehlszeile(ExpandConstant('{app}\config\einstellungen.json')) + '"' +
+            ' -Inbox "'        + FuerBefehlszeile(InboxOrdner('')) + '"' +
+            ' -Mediathek "'    + FuerBefehlszeile(MediathekOrdner('')) + '"' +
+            ' -Protokolle "'   + FuerBefehlszeile(ExpandConstant('{app}\protokolle')) + '"' +
+            ' -ExifToolPath "' + FuerBefehlszeile(ExifZiel) + '"';
   if not Exec('powershell.exe', Befehl, '', SW_HIDE, ewWaitUntilTerminated, Code) then
     Code := -1;
   if Code = 2 then
