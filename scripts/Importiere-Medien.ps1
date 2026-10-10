@@ -116,7 +116,21 @@ $standardErweiterungen = @(
     'dng','raw','cr2','cr3','nef','arw','orf','rw2',
     'mp4','mov','avi','mts','m2ts','m4v','mkv'
 )
-$standardExifTool = "E:\Exiftool\exiftool.exe"
+# Rueckfallkette fuer ExifTool. Parameter und Einstellungsdatei stehen weiter
+# davor; hier geht es nur um den Fall, dass beide schweigen.
+#   1. exiftool\exiftool.exe neben dem Programm - so liefert das Setup es aus.
+#   2. der Suchpfad, falls jemand ExifTool regulaer installiert hat.
+#   3. der bisherige feste Pfad, damit der Entwicklungsrechner unveraendert laeuft.
+function Get-ExifToolStandard {
+    param([string]$ProgrammWurzel)
+    $daneben = Join-Path $ProgrammWurzel "exiftool\exiftool.exe"
+    if (Test-Path -LiteralPath $daneben -PathType Leaf) { return $daneben }
+    $imPfad = Get-Command 'exiftool.exe' -CommandType Application -ErrorAction SilentlyContinue |
+              Select-Object -First 1 -ExpandProperty Source
+    if ($imPfad) { return $imPfad }
+    return "E:\Exiftool\exiftool.exe"
+}
+$standardExifTool = Get-ExifToolStandard -ProgrammWurzel $Root
 
 # Der Datumsvorsatz, den dieses Skript selbst vergibt: yyyyMMdd_HHmmss_ mit plausiblem
 # Monat, Tag und Uhrzeit. Beide Modi pruefen dagegen, deshalb steht das Muster nur hier.
@@ -191,6 +205,10 @@ if (-not $PSBoundParameters.ContainsKey('Erweiterungen')) {
 }
 if (-not $PSBoundParameters.ContainsKey('ExifToolPath')) {
     $ExifToolPath = [string](Get-Einstellung $konfig 'ExifToolPath' $standardExifTool)
+    # Ein leerer Wert in der Datei zaehlt wie ein fehlender: die mitgelieferte
+    # Vorlage traegt hier nichts ein, und ueber die Seite laesst sich das Feld
+    # leeren. Sonst stuende im Fehlertext ein leerer Pfad.
+    if (-not $ExifToolPath) { $ExifToolPath = $standardExifTool }
 }
 if (-not $PSBoundParameters.ContainsKey('EreignisOrdnerName')) {
     $EreignisOrdnerName = [string](Get-Einstellung $konfig 'EreignisOrdnerName' $EreignisOrdnerName)
