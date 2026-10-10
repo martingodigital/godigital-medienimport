@@ -26,7 +26,46 @@ chronologisch.
 
 ---
 
-## 2. In drei Schritten
+## 2. Installieren
+
+Wer das Programm schon eingerichtet hat, überspringt diesen Abschnitt.
+
+1. Das Setup von der Projektseite herunterladen und starten.
+2. Windows zeigt beim ersten Start einen blauen Hinweis: „Der Computer wurde durch Windows
+   geschützt". Auf **Weitere Informationen** klicken, dann auf **Trotzdem ausführen**. Der
+   Hinweis erscheint, weil das Setup keine gekaufte Signatur trägt – nicht, weil etwas damit
+   nicht stimmt.
+3. Durch den Assistenten klicken.
+
+Der Assistent fragt nach zwei Ordnern:
+
+- **Mediathek** – hier liegen die fertig einsortierten Fotos und Videos. Dieser Ordner wächst
+  mit der Zeit auf viele Gigabyte; wer eine zweite Festplatte hat, wählt sie hier.
+- **Inbox** – der Eingang für neue Dateien.
+
+Beide Ordner dürfen nicht derselbe sein, und keiner darf im anderen liegen: Sonst würde das
+Programm die bereits einsortierten Bilder bei jedem Lauf noch einmal einlesen. Der Assistent
+sagt es, falls die Angaben nicht zusammenpassen.
+
+Während der Installation wird **ExifTool** aus dem Internet geladen, rund 11 MB. Das ist das
+Hilfsprogramm, das das Aufnahmedatum aus den Fotos liest; einmal Internet ist dafür nötig.
+Schlägt der Download fehl, bietet der Assistent an, es noch einmal zu versuchen oder eine
+schon vorhandene `exiftool.exe` auszuwählen.
+
+Am Ende legt das Setup eine Verknüpfung auf dem Desktop an, die die Weboberfläche startet.
+Im Startmenü liegt eine Gruppe mit allen Einträgen.
+
+**Aktualisieren:** Ein neueres Setup einfach über die vorhandene Installation laufen lassen.
+Ihre Einstellungen und Ihre Bilder bleiben dabei unberührt; der Assistent sagt auf der letzten
+Seite, dass die vorhandenen Einstellungen beibehalten wurden.
+
+**Entfernen:** Über „Apps & Features" in den Windows-Einstellungen. Entfernt werden das
+Programm, ExifTool und die Verknüpfungen. **Ihre Mediathek, die Inbox und die Protokolle
+bleiben erhalten** – die Bilder gehören Ihnen, nicht dem Programm.
+
+---
+
+## 3. In drei Schritten
 
 1. Dateien von Kamera, Drohne oder Handy nach `inbox\` kopieren.
 2. Doppelklick auf **Vorschau (aendert nichts).cmd** – zeigt nur an, was passieren würde.
@@ -36,7 +75,7 @@ Nach Schritt 3 liegt ein Protokoll in `protokolle\`.
 
 ---
 
-## 3. Die Weboberfläche
+## 4. Die Weboberfläche
 
 Wer lieber klickt als doppelklickt: **Weboberflaeche starten.cmd** öffnet eine Seite im
 Browser, auf der sich alles bedienen lässt. Das schwarze Fenster, das dabei aufgeht, muss
@@ -58,7 +97,7 @@ Die Seite hat drei Reiter:
   ein, statt sie zu Ereignissen zu machen. Der zweite schaltet den Endungsfilter ab und
   zieht dann auch Textdateien und XMP-Beidateien mit in die Mediathek. Der dritte macht
   etwas ganz anderes als die beiden: Er lässt die Inbox in Ruhe und sortiert stattdessen
-  die vorhandene Mediathek um, genau wie `-Reorganisieren` in Abschnitt 7, inklusive
+  die vorhandene Mediathek um, genau wie `-Reorganisieren` in Abschnitt 8, inklusive
   Löschen leerer Ordner. Ist er gesetzt, sind Ereignisname, Namensfilter und die beiden
   anderen Schalter gesperrt; das Ordnerschema bleibt wählbar, denn danach wird umsortiert.
   Die Rückfrage vor dem Start weist eigens auf die Löschung hin.
@@ -94,7 +133,7 @@ damit Anzeige und Lauf nicht auseinanderlaufen.
 
 ---
 
-## 4. Ereignisse: Urlaub, Feier, Projekt
+## 5. Ereignisse: Urlaub, Feier, Projekt
 
 Sollen Aufnahmen zusammenbleiben statt über Monatsordner verteilt zu werden, legt man in
 der Inbox einen Ordner an und benennt ihn wie gewünscht:
@@ -127,7 +166,7 @@ lässt sich in einem Lauf mischen.
 
 ---
 
-## 5. Die Ordner
+## 6. Die Ordner
 
 | Ordner / Datei | Bedeutung |
 |---|---|
@@ -135,7 +174,7 @@ lässt sich in einem Lauf mischen.
 | `mediathek\` | Das Ergebnis. Hier nichts von Hand umbenennen. |
 | `mediathek\Ereignisse\` | Die benannten Ereignisordner. |
 | `protokolle\` | Ein Protokoll je echtem Lauf. |
-| `config\einstellungen.json` | Standardwerte, siehe Abschnitt 8. |
+| `config\einstellungen.json` | Standardwerte, siehe Abschnitt 9. |
 | `scripts\Importiere-Medien.ps1` | Das Programm. |
 | `scripts\Starte-Weboberflaeche.ps1` | Der Dienst hinter der Weboberfläche. |
 | `web\index.html` | Die Seite selbst. |
@@ -145,7 +184,7 @@ lässt sich in einem Lauf mischen.
 
 ---
 
-## 6. Die Regeln
+## 7. Die Regeln
 
 Nichts wird überschrieben. Trifft eine Datei auf einen bereits belegten Zielnamen,
 vergleicht das Programm den Inhalt:
@@ -180,7 +219,7 @@ Endungsfilter mitwandern.
 
 ---
 
-## 7. Für Fortgeschrittene: der direkte Aufruf
+## 8. Für Fortgeschrittene: der direkte Aufruf
 
 ```powershell
 # Vorschau, ändert nichts und schreibt kein Protokoll
@@ -252,22 +291,23 @@ Zum Ausprobieren ohne Risiko lassen sich alle Pfade einzeln umbiegen:
 
 ---
 
-## 8. Einstellungen
+## 9. Einstellungen
 
-`config\einstellungen.json` enthält die Standardwerte. So ist die Datei aufgebaut, die
-Liste der Dateitypen ist hier gekürzt dargestellt:
+`config\einstellungen.json` enthält die Standardwerte. Das Setup legt sie beim Installieren
+an und trägt die Ordner aus dem Assistenten ein. So ist die Datei aufgebaut, die Pfade
+stammen aus einer Beispielinstallation und die Liste der Dateitypen ist gekürzt:
 
 ```json
 {
-  "Inbox": "E:\\GoDigital Medienimport\\inbox",
-  "Mediathek": "E:\\GoDigital Medienimport\\mediathek",
-  "Protokolle": "E:\\GoDigital Medienimport\\protokolle",
+  "Inbox": "C:\\Users\\Martin\\Pictures\\GoDigital Inbox",
+  "Mediathek": "C:\\Users\\Martin\\Pictures\\GoDigital Mediathek",
+  "Protokolle": "C:\\Users\\Martin\\AppData\\Local\\Programs\\GoDigital Medienimport\\protokolle",
   "Gruppierung": "JahrMonat",
   "Praefix": "",
   "Erweiterungen": ["jpg", "jpeg", "heic", "mp4", "mov"],
   "UnterordnerAlsEreignisse": true,
   "EreignisOrdnerName": "Ereignisse",
-  "ExifToolPath": "E:\\Exiftool\\exiftool.exe",
+  "ExifToolPath": "C:\\Users\\Martin\\AppData\\Local\\Programs\\GoDigital Medienimport\\exiftool\\exiftool.exe",
   "VideoZeitAlsOrtszeit": true
 }
 ```
@@ -282,7 +322,7 @@ Angaben, liegen die Ordner wie bisher neben dem Programm. Den Inbox-Ordner muss 
 Mediathek und Protokolle werden beim ersten Lauf angelegt, sofern der übergeordnete Ordner
 vorhanden ist.
 
-Rückwärtsstriche in Pfaden müssen in JSON doppelt geschrieben werden: `E:\\Exiftool\\exiftool.exe`.
+Rückwärtsstriche in Pfaden müssen in JSON doppelt geschrieben werden: `D:\\Fotoarchiv`.
 
 Eine leere Liste `"Erweiterungen": []` schaltet den Endungsfilter ab und wirkt wie
 `-AlleDateien` – nicht etwa umgekehrt. Wer die eingebaute Liste will, lässt den Schlüssel
@@ -291,7 +331,7 @@ kein einziger Dateityp angehakt ist.
 
 ---
 
-## 9. Protokolle
+## 10. Protokolle
 
 Jeder echte Lauf schreibt `protokolle\protokoll_<Zeitstempel>.md`. Darin stehen die
 verwendeten Einstellungen, eine Zusammenfassung und eine Tabelle mit einer Zeile je Datei:
@@ -313,11 +353,12 @@ angelegt.
 
 ---
 
-## 10. Gut zu wissen
+## 11. Gut zu wissen
 
-ExifTool muss vorhanden sein, standardmäßig unter `E:\Exiftool\exiftool.exe`. Ohne
-ExifTool bricht der Import mit einer Meldung ab. Für `-Reorganisieren` wird es nicht
-gebraucht. Sonst wird nichts weiter benötigt: Das in Windows enthaltene PowerShell 5.1
+ExifTool muss vorhanden sein. Das Setup legt es in den Unterordner `exiftool` der
+Installation; genau dort sucht das Programm zuerst, danach im Suchpfad von Windows. Wer
+einen anderen Pfad braucht, trägt ihn in den Einstellungen ein. Ohne ExifTool bricht der
+Import mit einer Meldung ab. Für `-Reorganisieren` wird es nicht gebraucht. Sonst wird nichts weiter benötigt: Das in Windows enthaltene PowerShell 5.1
 genügt, PowerShell 7 geht auch.
 
 Scheitert ein direkter `.ps1`-Aufruf an der Ausführungsrichtlinie, hilft die `.cmd`
@@ -332,7 +373,7 @@ Mediathek. Beide Projekte arbeiten unabhängig voneinander.
 
 ---
 
-## 11. Kurzreferenz
+## 12. Kurzreferenz
 
 | Ich will … | … das tun |
 |---|---|

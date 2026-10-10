@@ -31,8 +31,11 @@ noch Mediathek, auch nicht sein `archiv\`.
 | `mediathek\` | **Ergebnis.** Datumsbaum `<Jahr>\<Jahr-Monat>\` plus Zweig `Ereignisse\`. Nicht manuell umbenennen. |
 | `mediathek\Ereignisse\` | Benannte Ereignisordner, aus Inbox-Unterordnern oder `-Ereignis`. |
 | `config\einstellungen.json` | Standardwerte. Optional; fehlt sie, greifen die eingebauten Werte. |
+| `config\einstellungen.vorlage.json` | Versionierte Vorlage mit leeren Ordnerangaben. Der Installer macht daraus die echte Datei. |
 | `scripts\Importiere-Medien.ps1` | Der Motor. Läuft eigenständig, kennt die Oberfläche nicht. |
 | `scripts\Starte-Weboberflaeche.ps1` | HTTP-Dienst auf 127.0.0.1, ruft den Motor als eigenen Prozess auf. |
+| `installer\` | **Installationsprogramm.** Inno-Setup-Quelle, Bauskript und zwei Hilfsskripte, die das Setup zur Laufzeit ruft. |
+| `docs\superpowers\` | Specs und Umsetzungspläne. Versioniert, kommt nicht ins Setup. |
 | `web\index.html` | Die Oberfläche. Wird vom Dienst ausgeliefert, lädt nichts von außen. |
 | `protokolle\` | Ein Markdown-Protokoll pro echtem Lauf (`protokoll_<zeitstempel>.md`). |
 | `protokolle\…_Anleitung-bebildert.pdf` | Bebilderte Anwenderanleitung. Versioniert, anders als die Laufprotokolle daneben. |
@@ -43,6 +46,9 @@ noch Mediathek, auch nicht sein `archiv\`.
 | `Vorschau (aendert nichts).cmd` | Doppelklick-Vorschau (`-WhatIf`). |
 | `Weboberflaeche starten.cmd` | Doppelklick-Start der Oberfläche. Fenster muss offen bleiben. |
 | `ANLEITUNG.md` | Nutzerdokumentation (nicht-technisch). Muss zu diesem Skript passen. |
+| `VERSION` | Eine Zeile, die Versionsnummer. Einzige Quelle; Protokollkopf und Setup lesen sie von hier. |
+| `LICENSE` | MIT, Inhaber Martin Goßner. |
+| `README.md` | Einstieg auf GitHub: Downloadlink, Voraussetzungen, SmartScreen-Hinweis. |
 
 ## Befehle
 
@@ -134,12 +140,16 @@ Rangfolge Parameter > Datei > Ordner neben dem Skript um und löst einen relativ
 Wert in der Datei zählt wie ein fehlender. `-EinstellungsDatei` bleibt der einzige Pfad, der
 nur über die Kommandozeile geht – er muss feststehen, bevor die Datei gelesen werden kann.
 
-Die eingecheckte `config\einstellungen.json` ist an diesen Rechner gebunden: Sie trägt vier
-absolute Pfade, dreimal `E:\GoDigital Medienimport\…` und dazu `E:\Exiftool\exiftool.exe`.
-Weil die Datei vor dem eingebauten Standard greift, zeigt ein Klon auf einem anderen Laufwerk
-oder in einem anderen Ordner nicht auf seine eigenen Ordner, sondern ins Leere – die
-Rückfallwerte neben dem Skript kommen gerade nicht zum Zug. Wer das Repository umzieht,
-passt zuerst diese Datei an oder löscht sie.
+`config\einstellungen.json` liegt **nicht** im Repository: Sie trägt absolute Pfade dieses
+Rechners und greift vor den eingebauten Standardwerten, ein Klon zeigte sonst ins Leere.
+Versioniert ist `config\einstellungen.vorlage.json` mit leeren Ordnerangaben – ein leerer Wert
+zählt wie ein fehlender, ein Klon landet damit bei den Ordnern neben dem Skript. Der Installer
+macht aus der Vorlage die echte Datei und trägt die Ordner aus dem Assistenten ein; eine
+vorhandene Datei fasst er nicht an.
+
+Der leere `ExifToolPath` der Vorlage ist der Grund für je eine zusätzliche Zeile in beiden
+Skripten: `Get-Einstellung` prüft auf `$null`, ein leerer String kommt also durch. Ohne diese
+Zeile bräche ein Lauf mit „ExifTool nicht gefunden: " ohne Pfad ab.
 
 Wer einen Schlüssel ergänzt, braucht dafür eine eigene `Get-Einstellung`-Zeile – die Datei
 wird nicht automatisch auf Parameter abgebildet.
@@ -387,6 +397,76 @@ Der Dienst bedient eine Anfrage nach der anderen. Das reicht für eine Oberfläc
 Benutzer und hält den Code klein; ein Import blockiert währenddessen die Seite, was richtig
 ist, weil zwei gleichzeitige Läufe auf derselben Inbox nichts Gutes ergäben.
 
+## Installationsprogramm
+
+`installer\` baut aus dem Projektordner eine einzelne `Setup.exe` (Inno Setup 6). Sie installiert
+ins Benutzerprofil nach `%LOCALAPPDATA%\Programs\GoDigital Medienimport`, ohne Administratorrechte:
+Das Programm schreibt Protokolle und Einstellungen in den eigenen Ordner, unter `C:\Programme`
+dürfte es das nicht.
+
+```powershell
+.\installer\Baue-Setup.ps1                      # Version aus VERSION, ExifTool-Fassung frisch
+.\installer\Baue-Setup.ps1 -OhneExifTool        # schneller, nutzt exiftool-fassung.txt weiter
+.\installer\Baue-Setup.ps1 -ArchivDatei <zip>   # falls der SourceForge-Download klemmt
+```
+
+**ExifTool wird beim Installieren geladen, nicht mitgeliefert.** Das hält das Setup bei rund
+einem Megabyte. Das Bauskript holt die Versionsnummer von `https://exiftool.org/ver.txt`, lädt
+das Archiv von SourceForge – die einzige Quelle, `exiftool.org` liefert für die ZIP-Datei 404 –,
+bildet die SHA256-Summe und schreibt alles nach `installer\exiftool-fassung.txt`. Diese Datei ist
+versioniert: Aus ihr geht hervor, welche ExifTool-Fassung in einem Release steckt.
+
+**Das Bauskript meldet sich mit einem eigenen User-Agent.** SourceForge schickt browserartigen
+Clients eine HTML-Zwischenseite mit ablaufendem Mirror-Token statt der Datei; der Standardwert
+von `Invoke-WebRequest` fällt darunter, mit einem echten Browser-Kennzeichen kommt sogar 403.
+Nicht-browserartige Clients bekommen die Datei direkt – Inno Setup gehört dazu, der Installer
+selbst war nie betroffen. Die Prüfung auf die ZIP-Kennung `PK` fängt den Fall trotzdem ab,
+damit nie die Prüfsumme einer Fehlerseite in ein Release wandert.
+
+**Geladen wird in `PrepareToInstall`, nicht auf einer eigenen Seite an `wpReady`.** Eine stille
+Installation (`/VERYSILENT`) durchläuft keine Assistentenseiten; dort entstünde sonst eine
+Installation ganz ohne ExifTool. Ein nicht leerer Rückgabewert dieser Funktion bricht sauber ab
+– geprüft mit einer falschen Prüfsumme: Exitcode 7, kein Zielordner. Die Prüfsumme prüft
+`DownloadTemporaryFile` selbst.
+
+**Die Arbeit steckt in PowerShell, nicht in Pascal.** `Entpacke-ExifTool.ps1` und
+`Schreibe-Einstellungen.ps1` laufen aus `{tmp}` (`Flags: dontcopy`) und sind einzeln auf der
+Kommandozeile prüfbar. Im Pascal-Teil bleiben Seiten und Prüfungen. Jeder Pfad geht dabei in
+Anführungszeichen an PowerShell: Zielordner und Medienordner dürfen Leerzeichen und Umlaute
+tragen (geprüft mit einer Installation nach `…\Programs\Prüfordner`).
+
+**Das Archiv wird durchsucht, nicht vorausgesetzt.** Die ausführbare Datei heißt
+`exiftool(-k).exe`; das `-k` ließe sie nach jedem Aufruf auf einen Tastendruck warten, der
+Import bliebe hängen. `Entpacke-ExifTool.ps1` sucht sie samt `exiftool_files` im entpackten
+Baum, statt einen Ordnernamen anzunehmen, und benennt beim Kopieren um. Fehlt `exiftool_files`,
+bricht es mit Code 1 und einer Begründung ab.
+
+**Die `AppId` `{{89A23525-B7D0-45C9-BA38-83D6BF357836}` bleibt für immer gleich.** Ändert sie
+sich, hält Windows ein Update für ein zweites Programm, und der Nutzer hat beides.
+
+**Eine vorhandene `einstellungen.json` bleibt unangetastet** (Rückgabe 2 des Schreibskripts).
+Die Schlussseite sagt es, sonst wunderte sich ein Nutzer, warum seine im Assistenten gewählten
+Ordner nicht greifen.
+
+**Die Ordnerprüfungen stehen in `installer\Ordnerpruefung.iss`** und werden per `#include` in den
+`[Code]`-Abschnitt gezogen. Der Grund ist die Prüfbarkeit: Ein Assistent lässt sich nur von Hand
+bedienen, dieselben Funktionen laufen so aber aus einem Wegwerf-Setup heraus gegen eine
+Fallliste. Die Datei ist ASCII ohne BOM und kommentiert mit `//` – innerhalb von `[Code]` gilt
+Pascal, ein `;`-Kommentar bricht den Compiler mit „BEGIN expected" ab.
+
+Die Ordnerseite prüft mehr als die Weboberfläche: Dort ist nur verboten, dass Inbox und
+Mediathek derselbe Ordner sind. Der Assistent lehnt zusätzlich ab, dass einer im anderen liegt
+– sonst läse der Import die Mediathek bei jedem Lauf noch einmal mit – und legt beide Ordner
+probeweise an, damit ein fehlendes Laufwerk hier auffällt und nicht erst beim ersten Import.
+
+**Vorbelegt wird `{%USERPROFILE}\Pictures`, nicht der Bilderordner der Shell.** Den biegt OneDrive
+auf einen Synchronisationsordner um (auf dem Entwicklungsrechner `…\OneDrive\Bilder 1`), und eine
+Mediathek mit mehreren Gigabyte gehört nicht ungefragt in die Cloud. Eine Konstante `{userpics}`
+kennt Inno Setup ohnehin nicht – sie führt zu einem Laufzeitfehler, der die Installation
+vollständig abbricht.
+
+Die `.iss` ist **UTF-8 mit BOM**, wie die Skripte: Ohne BOM zeigt der Assistent zerlegte Umlaute.
+
 ## Code-Konventionen
 
 - Das Skript ist **UTF-8 mit BOM**. Das BOM ist Pflicht, sonst liest Windows PowerShell 5.1
@@ -479,16 +559,20 @@ ist, weil zwei gleichzeitige Läufe auf derselben Inbox nichts Gutes ergäben.
 
 ## Voraussetzungen
 
-- **ExifTool**, Standardpfad `E:\Exiftool\exiftool.exe`, änderbar per `-ExifToolPath` oder
-  in der Einstellungsdatei. Keine Versionsprüfung. Nur im Inbox-Modus nötig.
+- **ExifTool.** Gesucht wird in dieser Reihenfolge: `-ExifToolPath`, Einstellungsdatei,
+  `exiftool\exiftool.exe` neben dem Programm (so liefert das Setup es aus), Suchpfad, zuletzt
+  `E:\Exiftool\exiftool.exe` als historischer Wert dieses Rechners. Keine Versionsprüfung.
+  Nur im Inbox-Modus nötig.
 - **PowerShell** 5.1 oder 7+.
 
 ## Geplant
 
-Die Weboberfläche ist gebaut, siehe oben. Was offen bleibt: Sie zeigt die Vorschau je Datei,
-kann aber keine einzelnen Dateien abwählen – der Lauf ist alles oder nichts. Ein
-`-Reorganisieren` lässt sich über die Seite anstoßen, die Vorschau dafür zeigt bislang
-dieselbe Tabelle wie ein Import.
+Weboberfläche und Installationsprogramm sind gebaut, siehe oben. Was offen bleibt: Die
+Oberfläche zeigt die Vorschau je Datei, kann aber keine einzelnen Dateien abwählen – der Lauf
+ist alles oder nichts. Ein `-Reorganisieren` lässt sich über die Seite anstoßen, die Vorschau
+dafür zeigt bislang dieselbe Tabelle wie ein Import. Das Setup trägt keine Signatur,
+SmartScreen meldet sich deshalb bei jedem Nutzer einmal; ein Code-Signing-Zertifikat kostet
+Geld und ist nicht beschafft.
 
 Für jede Erweiterung gilt weiter: Das Importskript bleibt der Motor und muss eigenständig
 per Doppelklick funktionsfähig bleiben. Jede neue Einstellung gehört in die JSON-Datei und

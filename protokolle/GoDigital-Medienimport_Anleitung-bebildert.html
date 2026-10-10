@@ -164,7 +164,7 @@
 
 <h1>GoDigital Medienimport</h1>
 <p class="untertitel">Fotos und Videos ordnen – bebilderte Anleitung für die tägliche Nutzung</p>
-<p class="stand">Stand 25. September 2026 · Diese Fassung richtet sich an Anwender. Die technische Fassung mit allen
+<p class="stand">Stand 10. Oktober 2026 · Diese Fassung richtet sich an Anwender. Die technische Fassung mit allen
 Aufrufen steht in <code>ANLEITUNG.md</code> im Projektordner.</p>
 
 <!-- ====================================================================== 1 -->
@@ -232,7 +232,81 @@ kopieren und den Import starten.</figcaption>
 </figure>
 
 <!-- ====================================================================== 2 -->
-<h2><span class="nr">2</span>Der neue Dateiname</h2>
+<!-- ====================================================================== 2 -->
+<h2><span class="nr">2</span>Das Programm einrichten</h2>
+
+<p>Wer das Programm schon auf seinem Rechner hat, kann diesen Abschnitt überspringen. Eingerichtet wird einmal, danach
+startet alles über die Verknüpfung auf dem Desktop.</p>
+
+<figure>
+<svg viewBox="0 0 672 206" role="img" aria-label="Die vier Schritte der Einrichtung">
+  <defs>
+    <marker id="pf2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#14607a"/>
+    </marker>
+  </defs>
+
+  <rect class="rahmen" x="8" y="24" width="142" height="120" rx="6"/>
+  <circle cx="34" cy="48" r="13" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="34" y="52" font-size="11" text-anchor="middle" fill="#14607a">1</text>
+  <text x="56" y="52" class="k" font-size="11">Herunterladen</text>
+  <text x="22" y="82" class="m" font-size="9">GoDigital-Medien-</text>
+  <text x="22" y="96" class="m" font-size="9">import-Setup.exe</text>
+  <text x="22" y="118" class="g" font-size="9.5">von der</text>
+  <text x="22" y="132" class="g" font-size="9.5">Projektseite</text>
+
+  <path class="pfeil" d="M154 84 L170 84" marker-end="url(#pf2a)"/>
+
+  <rect class="rahmen" x="174" y="24" width="142" height="120" rx="6"/>
+  <circle cx="200" cy="48" r="13" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="200" y="52" font-size="11" text-anchor="middle" fill="#14607a">2</text>
+  <text x="222" y="52" class="k" font-size="11">Hinweis</text>
+  <text x="222" y="66" class="k" font-size="11">bestätigen</text>
+  <text x="188" y="92" font-size="10">Weitere</text>
+  <text x="188" y="106" font-size="10">Informationen,</text>
+  <text x="188" y="120" font-size="10">dann Trotzdem</text>
+  <text x="188" y="134" font-size="10">ausführen</text>
+
+  <path class="pfeil" d="M320 84 L336 84" marker-end="url(#pf2a)"/>
+
+  <rect class="rahmen" x="340" y="24" width="142" height="120" rx="6"/>
+  <circle cx="366" cy="48" r="13" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="366" y="52" font-size="11" text-anchor="middle" fill="#14607a">3</text>
+  <text x="388" y="52" class="k" font-size="11">Ordner wählen</text>
+  <text x="354" y="80" class="k m" font-size="10">Mediathek</text>
+  <text x="354" y="94" class="g" font-size="9.5">wird groß</text>
+  <text x="354" y="114" class="k m" font-size="10">Inbox</text>
+  <text x="354" y="128" class="g" font-size="9.5">der Eingang</text>
+
+  <path class="pfeil" d="M486 84 L502 84" marker-end="url(#pf2a)"/>
+
+  <rect class="akzentbox" x="506" y="24" width="142" height="120" rx="6"/>
+  <circle cx="532" cy="48" r="13" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
+  <text x="532" y="52" font-size="11" text-anchor="middle" fill="#14607a">4</text>
+  <text x="554" y="52" class="k" font-size="11">Fertig</text>
+  <text x="520" y="82" font-size="10">Verknüpfung auf</text>
+  <text x="520" y="96" font-size="10">dem Desktop</text>
+  <text x="520" y="118" class="g" font-size="9.5">startet die</text>
+  <text x="520" y="132" class="g" font-size="9.5">Weboberfläche</text>
+
+  <text x="8" y="14" class="g" font-size="9.5">Einmal einrichten, danach nie wieder</text>
+  <text x="8" y="170" class="g" font-size="9.5">Während Schritt 3 lädt das Setup ExifTool aus dem Internet (rund 11 MB). Das ist das Hilfsprogramm, das</text>
+  <text x="8" y="184" class="g" font-size="9.5">das Aufnahmedatum aus den Fotos liest. Einmal Internet ist dafür nötig; danach läuft alles ohne.</text>
+  <text x="8" y="200" class="g" font-size="9.5">Mediathek und Inbox dürfen nicht derselbe Ordner sein und keiner darf im anderen liegen.</text>
+</svg>
+<figcaption><b>Bild 2:</b> Die Einrichtung. Der Windows-Hinweis in Schritt 2 erscheint, weil das Setup keine gekaufte
+Signatur trägt – nicht, weil etwas damit nicht stimmt.</figcaption>
+</figure>
+
+<div class="kasten">
+  <div class="kopf">Ihre Bilder gehören Ihnen</div>
+  <p>Ein späteres Setup lässt sich einfach über die vorhandene Installation laufen; Einstellungen und Bilder bleiben
+  unberührt. Und wer das Programm über „Apps &amp; Features“ wieder entfernt, verliert nur das Programm: Mediathek,
+  Inbox und die Berichte bleiben liegen, wo sie sind.</p>
+</div>
+
+<!-- ====================================================================== 3 -->
+<h2><span class="nr">3</span>Der neue Dateiname</h2>
 
 <p>Jede Datei behält ihren ursprünglichen Namen. Davor setzt das Programm Datum und Uhrzeit der Aufnahme. Das genügt,
 damit jeder Dateimanager die Bilder von allein in die richtige Reihenfolge bringt – auch quer über mehrere Geräte
@@ -267,7 +341,7 @@ hinweg.</p>
   <text x="180" y="132" class="g" font-size="9.5">Der Zusatz steht nur einmal am Anfang. An ihm erkennt das Programm</text>
   <text x="180" y="146" class="g" font-size="9.5">eine Datei wieder, die ein zweites Mal in die Inbox gerät.</text>
 </svg>
-<figcaption><b>Bild 2:</b> So ist der Name aufgebaut. Aus <code>IMG_1001.JPG</code> wird
+<figcaption><b>Bild 3:</b> So ist der Name aufgebaut. Aus <code>IMG_1001.JPG</code> wird
 <code>20260910_101530_IMG_1001.JPG</code>.</figcaption>
 </figure>
 
@@ -285,15 +359,15 @@ Vormittagsfotos.</p>
 <div class="kasten">
   <div class="kopf">Ein Hilfsprogramm im Hintergrund: ExifTool</div>
   <p>Die Aufnahmedaten liest das Programm nicht selbst aus, sondern überlässt das dem frei verfügbaren ExifTool
-  (<em>exiftool.org</em>). Es muss auf dem Rechner vorhanden sein; erwartet wird es unter
-  <code>E:\Exiftool\exiftool.exe</code>. Liegt es woanders, tragen Sie den Pfad einmalig in der Weboberfläche unter
-  <em>Einstellungen</em> ein.</p>
+  (<em>exiftool.org</em>). Das Setup lädt es beim Einrichten herunter und legt es in den Unterordner
+  <code>exiftool</code> der Installation; genau dort sucht das Programm zuerst. Wer es anderswo liegen hat, trägt den
+  Pfad einmalig in der Weboberfläche unter <em>Einstellungen</em> ein.</p>
   <p>Fehlt ExifTool, bricht der Import mit einer Meldung ab und verschiebt nichts. Für das nachträgliche Umsortieren
   einer bestehenden Mediathek wird es nicht gebraucht, dafür genügt das Datum im Dateinamen.</p>
 </div>
 
 <!-- ====================================================================== 3 -->
-<h2><span class="nr">3</span>Importieren in drei Schritten</h2>
+<h2><span class="nr">4</span>Importieren in drei Schritten</h2>
 
 <figure>
 <svg viewBox="0 0 672 166" role="img" aria-label="Die drei Schritte eines Imports">
@@ -310,7 +384,7 @@ Vormittagsfotos.</p>
   <text x="56" y="47" class="g" font-size="9.5">in den Ordner inbox\</text>
   <text x="22" y="76" font-size="10">Einfach hineinziehen.</text>
   <text x="22" y="92" font-size="10">Unterordner sind erlaubt,</text>
-  <text x="22" y="108" font-size="10">siehe Abschnitt 4.</text>
+  <text x="22" y="108" font-size="10">siehe Abschnitt 5.</text>
 
   <path class="pfeil" d="M212 69 L232 69" marker-end="url(#pf3)"/>
 
@@ -337,7 +411,7 @@ Vormittagsfotos.</p>
   <text x="8" y="148" class="g" font-size="9.5">Beim Start öffnet sich ein schwarzes Fenster mit der Fortschrittsanzeige. Es schließt sich erst,</text>
   <text x="8" y="162" class="g" font-size="9.5">wenn Sie eine Taste drücken – so bleibt das Ergebnis in Ruhe lesbar.</text>
 </svg>
-<figcaption><b>Bild 3:</b> Die drei Schritte. Die beiden Startsymbole liegen direkt im Projektordner.</figcaption>
+<figcaption><b>Bild 4:</b> Die drei Schritte. Die beiden Startsymbole liegen direkt im Projektordner.</figcaption>
 </figure>
 
 <div class="kasten">
@@ -348,7 +422,7 @@ Vormittagsfotos.</p>
 </div>
 
 <!-- ====================================================================== 4 -->
-<h2><span class="nr">4</span>Urlaub und Feiern zusammenhalten</h2>
+<h2><span class="nr">5</span>Urlaub und Feiern zusammenhalten</h2>
 
 <p>Manche Aufnahmen gehören inhaltlich zusammen, auch wenn sie über mehrere Tage oder sogar über einen Monatswechsel
 verteilt sind. Dafür legen Sie in der Inbox einen Ordner an und geben ihm den gewünschten Namen. Alles, was darin
@@ -385,7 +459,7 @@ liegt, landet gemeinsam unter <code>mediathek\Ereignisse\</code> – unter genau
 
   <text x="8" y="160" class="g" font-size="9.5">Lose Dateien, die direkt in der Inbox liegen, wandern weiterhin in die Monatsordner. Beides lässt sich in einem Durchgang mischen.</text>
 </svg>
-<figcaption><b>Bild 4:</b> Ein Unterordner in der Inbox wird zum Ereignisordner in der Mediathek.</figcaption>
+<figcaption><b>Bild 5:</b> Ein Unterordner in der Inbox wird zum Ereignisordner in der Mediathek.</figcaption>
 </figure>
 
 <div class="kasten gruen">
@@ -395,7 +469,7 @@ liegt, landet gemeinsam unter <code>mediathek\Ereignisse\</code> – unter genau
 </div>
 
 <!-- ====================================================================== 5 -->
-<h2><span class="nr">5</span>Die Weboberfläche</h2>
+<h2><span class="nr">6</span>Die Weboberfläche</h2>
 
 <p>Wer lieber in einem Fenster klickt, startet <code>Weboberflaeche starten.cmd</code>. Es öffnet sich eine Seite im
 Browser, auf der sich alles bedienen lässt. Dahinter läuft dasselbe Programm wie beim Doppelklick, nur eben mit
@@ -444,7 +518,7 @@ Formular statt mit schwarzem Fenster.</p>
 
   <text x="8" y="302" class="g" font-size="9.5">Die Seite ist nur auf diesem Rechner erreichbar. Andere im Netzwerk kommen nicht heran.</text>
 </svg>
-<figcaption><b>Bild 5:</b> Schematischer Aufbau der Seite. Oben die aktuellen Zahlen, darunter die drei Reiter.</figcaption>
+<figcaption><b>Bild 6:</b> Schematischer Aufbau der Seite. Oben die aktuellen Zahlen, darunter die drei Reiter.</figcaption>
 </figure>
 
 <table>
@@ -470,7 +544,7 @@ angelegt.</td></tr>
 </div>
 
 <!-- ====================================================================== 6 -->
-<h2><span class="nr">6</span>Wenn eine Datei schon vorhanden ist</h2>
+<h2><span class="nr">7</span>Wenn eine Datei schon vorhanden ist</h2>
 
 <p>Das Programm überschreibt grundsätzlich nichts. Trifft eine Datei auf einen Namen, den es in der Mediathek schon
 gibt, vergleicht es zuerst den Inhalt und entscheidet dann.</p>
@@ -519,7 +593,7 @@ gibt, vergleicht es zuerst den Inhalt und entscheidet dann.</p>
   <text x="570" y="232" class="m" font-size="9">…_IMG_1001_1.JPG</text>
   <text x="570" y="246" class="g" font-size="9">Im Bericht: OK</text>
 </svg>
-<figcaption><b>Bild 6:</b> Der Entscheidungsweg. Es gibt keinen Fall, in dem eine vorhandene Datei überschrieben
+<figcaption><b>Bild 7:</b> Der Entscheidungsweg. Es gibt keinen Fall, in dem eine vorhandene Datei überschrieben
 wird.</figcaption>
 </figure>
 
@@ -530,7 +604,7 @@ das Programm die bereits vorhandenen Aufnahmen und lässt sie liegen.</p>
 völlig anderen Namen fällt nicht auf und wird ein zweites Mal einsortiert.</p>
 
 <!-- ====================================================================== 7 -->
-<h2><span class="nr">7</span>Wohin einsortiert wird</h2>
+<h2><span class="nr">8</span>Wohin einsortiert wird</h2>
 
 <p>Voreingestellt ist ein Ordner je Jahr und darin einer je Monat. Wer es anders mag, stellt das Schema in der
 Weboberfläche unter <em>Einstellungen</em> um. Die Auswirkung sehen Sie hier:</p>
@@ -567,11 +641,11 @@ Weboberfläche unter <em>Einstellungen</em> um. Die Auswirkung sehen Sie hier:</
 
   <text x="8" y="160" class="g" font-size="9.5">Ereignisordner bleiben davon unberührt: Sie liegen immer unter mediathek\Ereignisse\, unabhängig vom gewählten Schema.</text>
 </svg>
-<figcaption><b>Bild 7:</b> Die vier möglichen Ablagen. Die Dateinamen sind in allen Fällen gleich.</figcaption>
+<figcaption><b>Bild 8:</b> Die vier möglichen Ablagen. Die Dateinamen sind in allen Fällen gleich.</figcaption>
 </figure>
 
 <!-- ====================================================================== 8 -->
-<h2><span class="nr">8</span>Der Bericht nach jedem Durchgang</h2>
+<h2><span class="nr">9</span>Der Bericht nach jedem Durchgang</h2>
 
 <p>Nach jedem echten Import entsteht im Ordner <code>protokolle\</code> eine Datei mit Datum und Uhrzeit im Namen.
 Darin stehen die verwendeten Einstellungen, eine Zusammenfassung und eine Zeile je Datei. Öffnen lässt sie sich mit
@@ -592,7 +666,7 @@ Durchgang läuft trotzdem weiter.</td></tr>
 Bericht, weil nichts passiert ist.</p>
 
 <!-- ====================================================================== 9 -->
-<h2><span class="nr">9</span>Wenn etwas nicht klappt</h2>
+<h2><span class="nr">10</span>Wenn etwas nicht klappt</h2>
 
 <table>
 <thead><tr><th>Das sehen Sie</th><th>Das steckt dahinter</th></tr></thead>
@@ -621,7 +695,7 @@ statt über die Startsymbole aufgerufen wird. Die beiden <code>.cmd</code>-Symbo
 </div>
 
 <!-- ===================================================================== 10 -->
-<h2 id="spickzettel"><span class="nr">10</span>Spickzettel</h2>
+<h2 id="spickzettel"><span class="nr">11</span>Spickzettel</h2>
 
 <table>
 <thead><tr><th>Ich möchte …</th><th>… so geht es</th></tr></thead>
@@ -664,7 +738,7 @@ werden.</td></tr>
   Bericht.</p>
 </div>
 
-<p class="fuss">GoDigital Medienimport · Bebilderte Anleitung · Stand 25. September 2026 · Technische Fassung:
+<p class="fuss">GoDigital Medienimport · Bebilderte Anleitung · Stand 10. Oktober 2026 · Technische Fassung:
 <code>ANLEITUNG.md</code> im Projektordner</p>
 
 </body>
