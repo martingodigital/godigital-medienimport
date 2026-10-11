@@ -30,3 +30,8 @@ installer/ausgabe/
 # Sie tragen Pfade dieses Rechners und helfen niemandem, der das Programm nutzt.
 docs/superpowers/
 .superpowers/
+
+# Rueckmeldungen aus dem Betatest. Sie nennen Namen und Rechner der Tester und
+# gehoeren nicht ins oeffentliche Repository; umgesetzt wird daraus spaeter ein
+# Eintrag in CHANGELOG.md.
+BETATEST.md

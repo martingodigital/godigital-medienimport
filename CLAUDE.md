@@ -47,6 +47,7 @@ noch Mediathek, auch nicht sein `archiv\`.
 | `docs\weboberflaeche.png` | Der Screenshot im README. Entstanden gegen Wegwerf-Ordner, nicht gegen die echte Mediathek. |
 | `docs\superpowers\` | Specs und Umsetzungspläne. Nur lokal: `.gitignore` hält sie draußen, weil sie Pfade dieses Rechners tragen und niemandem helfen, der das Programm benutzt. |
 | `CHANGELOG.md` | Was sich je Fassung geändert hat. Die Nummer selbst steht weiterhin nur in `VERSION`. |
+| `BETATEST.md` | Rückmeldungen aus dem Betatest, je Meldung nach Nutzen und Aufwand beurteilt. Nur lokal, die `.gitignore` hält die Datei draußen: Sie nennt die Tester. Was umgesetzt wird, landet danach in `CHANGELOG.md`. |
 | `.gitignore` | Hält Medien, die Laufzeitordner, `.bak`-Kopien, das gebaute Setup und die Entwicklungsunterlagen aus dem Repository. |
 | `Medien importieren.cmd` | **Doppelklick-Start** (ohne Claude). |
 | `Vorschau (aendert nichts).cmd` | Doppelklick-Vorschau (`-WhatIf`). |
