@@ -93,6 +93,18 @@ if (-not $EinstellungsDatei) { $EinstellungsDatei = Join-Path $Root "config\eins
 
 $start = Get-Date
 
+# --- Zaehler fuer Phasenzeiten und Durchsatz ---------------------------------
+# Aus dem Betatest: 480 Bilder zu je 8 MB sahen aus, als haenge das Programm. Bis
+# zur ersten Zeile vergehen die Sekunden des ExifTool-Durchlaufs, und danach sagt
+# nichts, wie weit der Lauf ist. Gemessen (480 Dateien, 3,6 GB): Metadaten 12 s,
+# Einsortieren auf demselben Laufwerk unter 1 s, auf ein anderes 11 s.
+# [long] ist Pflicht: 3,6 GB sprengen Int32.
+[long]$summeBytes      = 0
+[long]$erledigtBytes   = 0
+$uhrMetadaten          = New-Object System.Diagnostics.Stopwatch
+$uhrEinsortieren       = New-Object System.Diagnostics.Stopwatch
+$gleichesLaufwerk      = $true
+
 # --- Programmversion ---------------------------------------------------------
 # Die Nummer steht ausschliesslich in VERSION. Fehlt die Datei - etwa in einem
 # unvollstaendig kopierten Ordner -, laeuft der Import weiter und meldet
@@ -290,6 +302,64 @@ function Test-GleicheDatei {
     }
 }
 
+# --- Hilfsfunktionen: Zahlen lesbar machen -----------------------------------
+function Format-Datenmenge {
+    param([long]$Bytes)
+    if ($Bytes -ge 1GB) { return ("{0:N2} GB" -f ($Bytes / 1GB)) }
+    if ($Bytes -ge 1MB) { return ("{0:N1} MB" -f ($Bytes / 1MB)) }
+    if ($Bytes -ge 1KB) { return ("{0:N0} KB" -f ($Bytes / 1KB)) }
+    return ("{0:N0} Bytes" -f $Bytes)
+}
+
+function Format-Dauer {
+    param([double]$Sekunden)
+    if ($Sekunden -ge 60) {
+        $m = [math]::Floor($Sekunden / 60)
+        return ("{0} min {1:N0} s" -f $m, ($Sekunden - $m * 60))
+    }
+    return ("{0:N1} s" -f $Sekunden)
+}
+
+# --- Hilfsfunktion: liegen zwei Pfade auf demselben Laufwerk? ----------------
+# Auf demselben Laufwerk ist Move-Item ein Umbenennen und kostet nichts. Ueber
+# eine Laufwerksgrenze kopiert Windows jede Datei und loescht danach die Quelle;
+# dann bestimmt die langsamere Platte die Dauer des ganzen Laufs. Im Zweifel
+# (nicht aufloesbarer Pfad) wird kein Hinweis ausgegeben.
+function Test-GleichesLaufwerk {
+    param([string]$A, [string]$B)
+    try {
+        $wa = [System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($A))
+        $wb = [System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($B))
+        return ($wa -ieq $wb)
+    } catch { return $true }
+}
+
+# --- Hilfsfunktion: Fortschritt anzeigen -------------------------------------
+# Write-Progress geht in den Progress-Stream, nicht nach stdout. Die Vorschau und
+# das Auswerten der Ausgabe in der Weboberflaeche bleiben davon unberuehrt - eine
+# zusaetzliche Zeile auf stdout wuerde dort als Dateibewegung oder Meldung landen.
+# Unter Windows PowerShell 5.1 kostet jeder Aufruf Zeit, deshalb hoechstens alle
+# 200 ms zeichnen; die letzte Datei immer.
+$script:letzteAnzeige = [System.Diagnostics.Stopwatch]::StartNew()
+function Write-Fortschritt {
+    param(
+        [int]$Nummer,
+        [int]$Gesamt,
+        [string]$Datei,
+        [long]$Bytes = 0,
+        [long]$GesamtBytes = 0,
+        [switch]$Erzwingen
+    )
+    if (-not $Erzwingen -and $script:letzteAnzeige.ElapsedMilliseconds -lt 200) { return }
+    $script:letzteAnzeige.Restart()
+    $anteil = if ($Gesamt -gt 0) { [int](100 * $Nummer / $Gesamt) } else { 0 }
+    $menge  = if ($GesamtBytes -gt 0) { " - $(Format-Datenmenge $Bytes) von $(Format-Datenmenge $GesamtBytes)" } else { "" }
+    Write-Progress -Activity "Einsortieren" `
+                   -Status ("Datei {0} von {1}{2}" -f $Nummer, $Gesamt, $menge) `
+                   -CurrentOperation $Datei `
+                   -PercentComplete ([math]::Min($anteil, 100))
+}
+
 # --- Hilfsfunktion: freien Zielnamen mit Zaehler suchen ----------------------
 function Get-FreierZielName {
     param([string]$ZielOrdner, [string]$Name, $Belegt)
@@ -325,13 +395,33 @@ if ($Reorganisieren) {
     # Der Ereignis-Zweig bleibt aussen vor. Er leitet seinen Ort nicht aus dem
     # Dateinamen ab, ein Umsortieren wuerde die Ereignisse stillschweigend aufloesen.
     $ereignisPfad = Join-Path $Mediathek $EreignisOrdnerName
-    $dateien = Get-ChildItem -LiteralPath $Mediathek -File -Recurse |
+    Write-Host "Schritt 1 von 2: Mediathek durchsehen. Bei vielen Dateien dauert das." -ForegroundColor Gray
+    $uhrMetadaten.Start()
+    $dateien = @(Get-ChildItem -LiteralPath $Mediathek -File -Recurse |
                Where-Object {
                    $_.Name -match $datumsVorsatzMuster -and
                    -not $_.FullName.StartsWith($ereignisPfad, [System.StringComparison]::OrdinalIgnoreCase)
-               }
+               })
+    $uhrMetadaten.Stop()
+    foreach ($f in $dateien) { $summeBytes += [long]$f.Length }
 
+    $gesamtZuTun = $dateien.Count
+    Write-Host ("Schritt 1 von 2 fertig: {0} {1}, {2}, gelesen in {3}." -f `
+                $gesamtZuTun, $(if ($gesamtZuTun -eq 1) { "Datei" } else { "Dateien" }), (Format-Datenmenge $summeBytes), (Format-Dauer $uhrMetadaten.Elapsed.TotalSeconds)) -ForegroundColor Gray
+    if ($gesamtZuTun -gt 0) {
+        if ($WhatIfPreference) { Write-Host "Schritt 2 von 2: Vorschau erstellen." -ForegroundColor Gray }
+        else                   { Write-Host "Schritt 2 von 2: umsortieren." -ForegroundColor Gray }
+    }
+
+    $uhrEinsortieren.Start()
+    $nummer = 0
     foreach ($f in $dateien) {
+        $nummer++
+        # Innerhalb der Mediathek bleibt alles auf demselben Laufwerk; hier zaehlt
+        # die Anzahl, nicht die Datenmenge.
+        if (-not $WhatIfPreference) {
+            Write-Fortschritt -Nummer $nummer -Gesamt $gesamtZuTun -Datei $f.Name
+        }
         $unter = Get-Unterordner -DatumPraefix $f.Name -Schema $Gruppierung
         $zielOrdner = if ($unter) { Join-Path $Mediathek $unter } else { $Mediathek }
         $ziel = Join-Path $zielOrdner $f.Name
@@ -348,12 +438,19 @@ if ($Reorganisieren) {
                 Write-Host "OK '$($f.Name)' -> '$unter'" -ForegroundColor Green
                 $ergebnisse.Add([pscustomobject]@{Status="OK"; Alt=$f.Name; Neu=(Join-Path $unter $f.Name); Grund=""})
                 $verschoben++
+                $erledigtBytes += [long]$f.Length
             } catch {
                 Write-Host "FEHLER '$($f.Name)': $($_.Exception.Message)" -ForegroundColor Red
                 $ergebnisse.Add([pscustomobject]@{Status="FEHLER"; Alt=$f.Name; Neu=(Join-Path $unter $f.Name); Grund=$_.Exception.Message})
                 $uebersprungen++
             }
         }
+    }
+
+    $uhrEinsortieren.Stop()
+    if (-not $WhatIfPreference) {
+        Write-Fortschritt -Nummer $gesamtZuTun -Gesamt $gesamtZuTun -Datei "" -Erzwingen
+        Write-Progress -Activity "Einsortieren" -Completed
     }
 
     # leere Unterordner aufraeumen, den Ereignis-Zweig eingeschlossen
@@ -394,14 +491,22 @@ if ($Reorganisieren) {
     # sich Videos gegenueber Fotos desselben Tages um den Zeitzonenversatz falsch ein.
     $exifArgs = @("-j","-d",$DatumsFormat)
     if ($videoZeitAlsOrtszeit) { $exifArgs += @("-api","QuickTimeUTC=1") }
-    $exifArgs += @("-CreateDate","-DateTimeOriginal","-ModifyDate","-FileName","-Directory")
+    # -FileSize# liefert die rohe Bytezahl als JSON-Zahl (ohne das # kaeme "7.7 MB"
+    # als Text). Damit steht die Datenmenge des Laufs fest, ohne eine einzige
+    # zusaetzliche Dateiabfrage - der eine ExifTool-Aufruf bleibt der einzige.
+    $exifArgs += @("-CreateDate","-DateTimeOriginal","-ModifyDate","-FileName","-Directory","-FileSize#")
     # -r immer: ExifTool sieht ohne Rekursion nur die losen Dateien der Inbox, Dateien in
     # Unterordnern blieben sonst bei -OhneUnterordner unbemerkt liegen. Ob ein Unterordner
     # zum Ereignis wird, entscheidet allein $label weiter unten.
     $exifArgs += "-r"
     $exifArgs += $inboxAbs
 
+    # Diese Phase ist der stumme Teil des Laufs: Bei vielen Dateien vergehen hier
+    # Sekunden bis Minuten, ohne dass etwas auf dem Bildschirm passiert.
+    Write-Host "Schritt 1 von 2: Metadaten lesen. ExifTool geht den Inbox-Ordner durch, das kann dauern." -ForegroundColor Gray
+    $uhrMetadaten.Start()
     $rohJson = & $ExifToolPath @exifArgs 2>$null
+    $uhrMetadaten.Stop()
 
     if ([string]::IsNullOrWhiteSpace($rohJson)) {
         Write-Host "Keine Dateien in der Inbox." -ForegroundColor Yellow
@@ -410,8 +515,15 @@ if ($Reorganisieren) {
         catch { Write-Host "JSON-Fehler: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
         if ($eintraege -isnot [array]) { $eintraege = @($eintraege) }
 
+        # --- Vorlauf: was ist ueberhaupt zu tun? ------------------------------
+        # Die drei Filter stehen hier und nicht mehr in der Hauptschleife, damit
+        # der Fortschritt "Datei 12 von 480" sagen kann statt "12 von 3200":
+        # ExifTool meldet auch .txt, .xmp und alles, was die Filter gleich wieder
+        # aussortieren. Bedingungen und Reihenfolge sind unveraendert uebernommen -
+        # wer hier etwas umstellt, laesst den Lauf andere Dateien verarbeiten.
+        $zuTun = New-Object System.Collections.Generic.List[object]
         foreach ($e in $eintraege) {
-            $dateiName  = $e.FileName
+            $dateiName   = $e.FileName
             $quellOrdner = ($e.Directory -replace '/','\').TrimEnd('\')
             $quelle      = Join-Path $quellOrdner $dateiName
 
@@ -430,6 +542,41 @@ if ($Reorganisieren) {
                 $ext = [System.IO.Path]::GetExtension($dateiName).TrimStart('.')
                 $treffer = $Erweiterungen | Where-Object { $_.ToString().TrimStart('.') -ieq $ext }
                 if (-not $treffer) { continue }
+            }
+
+            if ($null -ne $e.FileSize) { $summeBytes += [long]$e.FileSize }
+            $zuTun.Add($e)
+        }
+
+        $gesamtZuTun = $zuTun.Count
+        Write-Host ("Schritt 1 von 2 fertig: {0} {1}, {2}, gelesen in {3}." -f `
+                    $gesamtZuTun, $(if ($gesamtZuTun -eq 1) { "Datei" } else { "Dateien" }), (Format-Datenmenge $summeBytes), (Format-Dauer $uhrMetadaten.Elapsed.TotalSeconds)) -ForegroundColor Gray
+
+        $gleichesLaufwerk = Test-GleichesLaufwerk -A $Inbox -B $Mediathek
+        if ($gesamtZuTun -gt 0 -and -not $gleichesLaufwerk) {
+            Write-Host "Hinweis: Inbox und Mediathek liegen auf verschiedenen Laufwerken." -ForegroundColor Yellow
+            Write-Host "         Jede Datei wird deshalb kopiert und danach gelöscht. Das dauert so" -ForegroundColor Yellow
+            Write-Host "         lange wie dasselbe Kopieren im Explorer. Lägen beide Ordner auf einem" -ForegroundColor Yellow
+            Write-Host "         Laufwerk, wäre es nur ein Umbenennen und in Sekunden vorbei." -ForegroundColor Yellow
+        }
+
+        if ($gesamtZuTun -gt 0) {
+            if ($WhatIfPreference) { Write-Host "Schritt 2 von 2: Vorschau erstellen." -ForegroundColor Gray }
+            else                   { Write-Host "Schritt 2 von 2: einsortieren." -ForegroundColor Gray }
+        }
+
+        $uhrEinsortieren.Start()
+        $nummer = 0
+        foreach ($e in $zuTun) {
+            $nummer++
+            $dateiName   = $e.FileName
+            $quellOrdner = ($e.Directory -replace '/','\').TrimEnd('\')
+            $quelle      = Join-Path $quellOrdner $dateiName
+
+            # Nur im echten Lauf: Die Vorschau verschiebt nichts, ihre Zeit steckt
+            # in Schritt 1 und nicht hier.
+            if (-not $WhatIfPreference) {
+                Write-Fortschritt -Nummer $nummer -Gesamt $gesamtZuTun -Datei $dateiName -Bytes $erledigtBytes -GesamtBytes $summeBytes
             }
 
             # --- Ereignisname -------------------------------------------------
@@ -514,12 +661,19 @@ if ($Reorganisieren) {
                     Write-Host "OK '$dateiName' -> '$(Join-Path $unter $neuerName)'" -ForegroundColor Green
                     $ergebnisse.Add([pscustomobject]@{Status="OK"; Alt=$dateiName; Neu=(Join-Path $unter $neuerName); Grund=$grund})
                     $verschoben++
+                    if ($null -ne $e.FileSize) { $erledigtBytes += [long]$e.FileSize }
                 } catch {
                     Write-Host "FEHLER '$dateiName': $($_.Exception.Message)" -ForegroundColor Red
                     $ergebnisse.Add([pscustomobject]@{Status="FEHLER"; Alt=$dateiName; Neu=(Join-Path $unter $neuerName); Grund=$_.Exception.Message})
                     $uebersprungen++
                 }
             }
+        }
+        $uhrEinsortieren.Stop()
+        if (-not $WhatIfPreference) {
+            # Ohne -Completed bleibt das Fortschrittsband nach dem Lauf stehen.
+            Write-Fortschritt -Nummer $gesamtZuTun -Gesamt $gesamtZuTun -Datei "" -Bytes $erledigtBytes -GesamtBytes $summeBytes -Erzwingen
+            Write-Progress -Activity "Einsortieren" -Completed
         }
     }
 }
@@ -553,6 +707,23 @@ if (-not $Reorganisieren) {
     [void]$md.AppendLine("- **Videozeit in Ortszeit:** $textVideoZeit")
 }
 [void]$md.AppendLine("- **Gruppierung:** $Gruppierung")
+
+# Phasenzeiten und Durchsatz. Ohne sie laesst sich eine Rueckmeldung wie "dauert
+# ewig" nicht nachrechnen: Es bleibt offen, ob die Zeit im Metadatenlesen steckt
+# oder im Kopieren ueber eine Laufwerksgrenze.
+$dauerSekunden = ($ende - $start).TotalSeconds
+[void]$md.AppendLine("- **Dauer:** $(Format-Dauer $dauerSekunden) (Metadaten $(Format-Dauer $uhrMetadaten.Elapsed.TotalSeconds), Einsortieren $(Format-Dauer $uhrEinsortieren.Elapsed.TotalSeconds))")
+if ($erledigtBytes -ge 10MB -and $uhrEinsortieren.Elapsed.TotalSeconds -gt 0) {
+    $mbProSekunde = ($erledigtBytes / 1MB) / $uhrEinsortieren.Elapsed.TotalSeconds
+    [void]$md.AppendLine("- **Datenmenge:** $(Format-Datenmenge $erledigtBytes), Durchsatz $('{0:N0}' -f $mbProSekunde) MB/s")
+}
+if (-not $Reorganisieren) {
+    if ($gleichesLaufwerk) {
+        [void]$md.AppendLine("- **Laufwerke:** Inbox und Mediathek auf demselben Laufwerk, jede Datei wurde umbenannt")
+    } else {
+        [void]$md.AppendLine("- **Laufwerke:** Inbox und Mediathek auf verschiedenen Laufwerken, jede Datei wurde kopiert")
+    }
+}
 [void]$md.AppendLine("- **Einstellungen:** ``$konfigVerwendet``")
 [void]$md.AppendLine("")
 [void]$md.AppendLine("## Zusammenfassung")
@@ -578,3 +749,18 @@ $md.ToString() | Set-Content -LiteralPath $protokollDatei -Encoding UTF8
 Write-Host ""
 Write-Host "Fertig ($modusText). Verschoben: $verschoben, Übersprungen: $uebersprungen" -ForegroundColor Cyan
 Write-Host "Protokoll: $protokollDatei" -ForegroundColor Cyan
+# Diese beiden Zeilen stehen bewusst NACH "Protokoll:": Die Weboberflaeche liest
+# die Ausgabe zeilenweise gegen feste Muster, und die bisherige Reihenfolge der
+# erkannten Zeilen bleibt damit unangetastet.
+Write-Host ("Zeiten: Metadaten {0}, Einsortieren {1}, gesamt {2}" -f `
+            (Format-Dauer $uhrMetadaten.Elapsed.TotalSeconds),
+            (Format-Dauer $uhrEinsortieren.Elapsed.TotalSeconds),
+            (Format-Dauer ($ende - $start).TotalSeconds)) -ForegroundColor Cyan
+# Erst ab einer Datenmenge, bei der die Zahl etwas aussagt: Bei drei kleinen
+# Dateien misst man die Startzeit von PowerShell, nicht den Durchsatz.
+if ($erledigtBytes -ge 10MB -and $uhrEinsortieren.Elapsed.TotalSeconds -gt 0) {
+    Write-Host ("Durchsatz: {0} in {1} = {2:N0} MB/s" -f `
+                (Format-Datenmenge $erledigtBytes),
+                (Format-Dauer $uhrEinsortieren.Elapsed.TotalSeconds),
+                (($erledigtBytes / 1MB) / $uhrEinsortieren.Elapsed.TotalSeconds)) -ForegroundColor Cyan
+}

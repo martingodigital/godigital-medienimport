@@ -375,6 +375,21 @@ Scheitert ein direkter `.ps1`-Aufruf an der Ausführungsrichtlinie, hilft die `.
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
+Wie lange ein Import dauert, hängt fast nur an einer Frage: Liegen Inbox und Mediathek
+auf demselben Laufwerk? Wenn ja, benennt Windows jede Datei nur um, und das kostet
+praktisch nichts. In einer Messung waren 480 Bilder mit zusammen 3,6 GB nach rund zehn
+Sekunden einsortiert. Liegen die beiden Ordner auf verschiedenen Laufwerken, etwa die
+Inbox auf der internen Platte und die Mediathek auf einer externen, muss jede Datei
+kopiert und danach gelöscht werden. Das dauert so lange, wie dasselbe Kopieren im
+Explorer dauern würde, bei einer externen Platte am USB-Anschluss also schnell einige
+Minuten. Die Weboberfläche weist vorher darauf hin, wenn das der Fall ist.
+
+Am Ende jedes Laufs stehen die Zeiten auf dem Bildschirm, und dieselben Zahlen stehen
+oben im Protokoll: wie lange das Lesen der Aufnahmedaten gedauert hat, wie lange das
+Einsortieren, wie viele Daten dabei bewegt wurden und mit welchem Durchsatz. Wer den
+Eindruck hat, ein Import sei zu langsam, kann damit zeigen, woran es liegt. Während des
+Einsortierens zeigt das Fenster außerdem, bei welcher Datei der Lauf gerade ist.
+
 Der ältere `E:\Drohne-Foto-Workflow` bleibt unverändert bestehen und hat seine eigene
 Mediathek. Beide Projekte arbeiten unabhängig voneinander.
 

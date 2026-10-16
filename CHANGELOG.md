@@ -3,6 +3,22 @@
 Die Versionsnummer steht in `VERSION`; diese Datei sagt, was dahintersteckt.
 Ein Tag `v<Version>` löst den Bau des Setups aus.
 
+## 1.1.0 – 2026-10-11
+
+Aus dem Betatest: Ein Lauf mit 480 großen Bildern sah aus, als hänge das Programm.
+
+- Der Lauf sagt jetzt, woran er ist. Die beiden Schritte heißen „Metadaten lesen"
+  und „einsortieren"; beim Einsortieren läuft ein Fortschrittsbalken mit dem
+  Namen der aktuellen Datei mit. Der erste Schritt war bisher stumm und dauert
+  bei vielen Dateien am längsten.
+- Am Ende des Laufs und im Protokollkopf stehen die Zeiten je Schritt, die bewegte
+  Datenmenge und der Durchsatz. Damit lässt sich eine Rückmeldung wie „dauert
+  ewig" nachrechnen.
+- Liegen Inbox und Mediathek auf verschiedenen Laufwerken, sagen das jetzt sowohl
+  der Lauf als auch die Weboberfläche, und zwar vorher. Jede Datei muss dann
+  kopiert und danach gelöscht werden statt nur umbenannt; das ist der Unterschied
+  zwischen Sekunden und Minuten.
+
 ## 1.0.0 – 2026-10-10
 
 Erste veröffentlichte Fassung.

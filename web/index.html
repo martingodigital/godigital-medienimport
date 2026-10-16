@@ -291,6 +291,9 @@
   .hinweis.warn   { background: var(--warn-grund);   color: var(--warn);   border-left-color: var(--warn); }
   .hinweis.fehler { background: var(--fehler-grund); color: var(--fehler); border-left-color: var(--fehler); }
   .hinweis.gut    { background: var(--gut-grund);    color: var(--gut);    border-left-color: var(--gut); }
+  /* Weder Warnung noch Fehler, sondern eine Erklaerung: gedaempft, aber als
+     eigener Kasten erkennbar. */
+  .hinweis.sachlich { background: var(--senke); color: var(--leise); border-left-color: var(--linie-st); }
   #lagehinweis .hinweis { margin-top: 0; }
 
   /* --- Tabellen --- */
@@ -696,6 +699,11 @@ async function ladeLage() {
       hinweis(el("lagehinweis"), "fehler", "Den Inbox-Ordner gibt es nicht: " + l.inbox);
     } else if (!l.mediathekVorhanden) {
       hinweis(el("lagehinweis"), "warn", "Die Mediathek gibt es noch nicht. Sie wird beim ersten Lauf angelegt: " + l.mediathek);
+    } else if (l.verschiedeneLaufwerke) {
+      /* Kein Fehler, sondern die Erklärung für einen langsamen Lauf: Über eine
+         Laufwerksgrenze muss Windows jede Datei kopieren. Steht hier, weil es
+         vor dem Lauf nützt und hinterher nur noch tröstet. */
+      hinweis(el("lagehinweis"), "sachlich", "Inbox und Mediathek liegen auf verschiedenen Laufwerken. Jede Datei wird deshalb kopiert und danach gelöscht — das dauert so lange wie dasselbe Kopieren im Explorer. Auf einem Laufwerk wäre es nur ein Umbenennen.");
     } else {
       hinweis(el("lagehinweis"), "", "");
     }

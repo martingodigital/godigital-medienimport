@@ -463,6 +463,17 @@ function Get-Lage {
         $mediathekDateien = @(Get-ChildItem -LiteralPath $pfade.Mediathek -File -Recurse -ErrorAction SilentlyContinue).Count
     }
 
+    # Liegen Inbox und Mediathek auf verschiedenen Laufwerken, kopiert der Motor
+    # jede Datei und loescht danach die Quelle, statt sie nur umzubenennen. Bei
+    # grossen Bildmengen ist das der Unterschied zwischen Sekunden und Minuten,
+    # deshalb sagt die Seite es vor dem Lauf und nicht erst danach.
+    $verschiedeneLaufwerke = $false
+    try {
+        $wInbox     = [System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($pfade.Inbox))
+        $wMediathek = [System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($pfade.Mediathek))
+        $verschiedeneLaufwerke = -not ($wInbox -ieq $wMediathek)
+    } catch { }
+
     return [pscustomobject]@{
         inbox              = $pfade.Inbox
         inboxVorhanden     = $inboxDa
@@ -476,6 +487,7 @@ function Get-Lage {
         exifToolVorhanden  = (Test-Path -LiteralPath $exif -PathType Leaf)
         programmInDerInbox = $programmInDerInbox
         programmOrdner     = $Root
+        verschiedeneLaufwerke = $verschiedeneLaufwerke
         festeOrdner        = @($PfadUeberschreibung.Keys)
     }
 }
