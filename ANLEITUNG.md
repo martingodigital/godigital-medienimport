@@ -86,6 +86,14 @@ die beiden Knöpfe **Vorschau** und **Wirklich ausführen**. Darunter drei Zahle
 der Inbox, Ereignisordner und Dateien in der Mediathek; die Inbox-Kachel färbt sich, sobald
 dort etwas liegt. Fehlt ExifTool, erscheint darunter ein Hinweis darauf.
 
+Liegt in der Inbox mehr, als der Import anfasst — Textdateien, XMP-Beidateien, `Thumbs.db` —,
+nennt die Kachel beide Zahlen („6 von 8 in der Inbox zu importieren"). Nach einem
+vollständigen Import steht dort entsprechend „4 Dateien in der Inbox, davon keine zu
+importieren" statt einer Zahl, die nach unerledigter Arbeit aussieht.
+
+Wer die Seite offen lässt und nebenher Fotos in die Inbox kopiert, braucht nicht neu zu
+laden: Sobald das Fenster wieder nach vorn kommt, holt die Seite die Zahlen selbst.
+
 Rechts oben wechselt ein Knopf zwischen heller und dunkler Darstellung. Ohne Zutun folgt die
 Seite der Windows-Einstellung. Ganz unten stehen die drei letzten Läufe; ein Klick darauf
 öffnet das zugehörige Protokoll.
@@ -106,11 +114,15 @@ Die Seite hat drei Reiter:
   Erst danach wird **Wirklich ausführen** anklickbar, und auch dann folgt noch eine
   Rückfrage. Wer anschließend noch etwas am Formular ändert, braucht eine neue Vorschau.
   Einzelne Dateien lassen sich nicht abwählen: Der Lauf nimmt immer alles aus der Tabelle.
+  Dateien, deren Datum nur aus dem Dateisystem stammt, sind mit **Datum geschätzt**
+  gekennzeichnet — in der Vorschau, also bevor etwas verschoben wird.
 - **Einstellungen** bearbeitet dieselben Werte wie `config\einstellungen.json`, nur als
   Formular. Ganz oben stehen die drei Ordner: wo die Inbox liegt, wohin einsortiert wird und
   wohin die Protokolle kommen. Vor dem Speichern legt das Programm eine Sicherung als
   `einstellungen.json.bak` daneben. Mindestens ein Dateityp muss angehakt bleiben.
-- **Protokolle** zeigt die letzten 50 Protokolle, ohne im Explorer zu suchen.
+- **Protokolle** zeigt die letzten 50 Protokolle, ohne im Explorer zu suchen — gesetzt wie
+  die Tabellen im Reiter Import, nicht als Rohtext. Wer die Datei im Original braucht,
+  findet sie weiterhin im Protokollordner.
 
 Die Seite läuft nur auf dem eigenen Rechner. Andere im Netzwerk erreichen sie nicht, und
 ohne die Adresse aus dem Starterfenster funktioniert sie auch im eigenen Browser nicht.
@@ -352,11 +364,16 @@ verwendeten Einstellungen, eine Zusammenfassung und eine Tabelle mit einer Zeile
 Ein Fehler an einer einzelnen Datei bricht den Lauf nicht ab; die übrigen Dateien werden
 weiter verarbeitet. In der Zusammenfassung zählt die Spalte „Übersprungen" die Fehler mit.
 
-Bei einer Vorschau (`-WhatIf`) entsteht bewusst kein Protokoll. In der Vorschau steht in
-der Zusammenfassung außerdem immer „Verschoben: 0", weil nichts verschoben wird. Was
-passieren würde, steht in den Zeilen darüber, die mit `WhatIf:` beginnen. Die allerletzte
-Zeile nennt trotzdem einen Protokollpfad; diese Datei wird bei einer Vorschau nicht
-angelegt.
+Bei einer Vorschau (`-WhatIf`) entsteht bewusst kein Protokoll. Sie endet deshalb mit
+einer eigenen Schlusszeile — „Vorschau beendet. 11 Dateien würden verschoben, 1 bliebe
+liegen." — und dem Hinweis, dass nichts verändert und kein Protokoll geschrieben wurde.
+Welche Datei wohin wandern würde, steht in den Zeilen darüber, die mit `WhatIf:` beginnen.
+
+Hatte mindestens eine Datei kein Aufnahmedatum, sagt das eine zusätzliche Zeile unter der
+Zusammenfassung, und im Protokoll steht derselbe Satz. Das ist der Fall, vor dem man sich
+in Acht nehmen sollte: Eine Speicherkarte, die erst auf die Platte kopiert und dann
+importiert wird, bringt sonst einen ganzen Schwung Aufnahmen unter dem heutigen Datum in
+die Mediathek.
 
 ---
 

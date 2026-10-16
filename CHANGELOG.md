@@ -3,6 +3,28 @@
 Die Versionsnummer steht in `VERSION`; diese Datei sagt, was dahintersteckt.
 Ein Tag `v<Version>` löst den Bau des Setups aus.
 
+## 1.2.0 – 2026-10-16
+
+Aus dem Betatest: sechs Stellen, an denen das Programm etwas anderes sagte, als es tat
+oder meinte (R-06 bis R-09, R-12, R-13, R-16).
+
+- Die Vorschau sagt jetzt dasselbe wie der echte Lauf. Lagen zwei gleiche Aufnahmen im
+  selben Lauf, kündigte sie für die zweite einen Zähler an, während der Lauf sie als
+  Dublette übersprang.
+- Dateien ohne Aufnahmedatum sind als solche zu erkennen — schon in der Vorschau, mit
+  der Marke „Datum geschätzt", und als Zahl unter der Zusammenfassung. Bisher stand das
+  nur im Protokoll, und ein geschätztes Datum sah aus wie ein echtes.
+- Die Ergebnistabelle hat eine eigene Spalte für das Ziel. Vorher stand der Zielpfad in
+  der Spalte „Grund".
+- Das Lageband unterscheidet zwischen Dateien in der Inbox und Dateien, die der Import
+  anfasst. Nach einem vollständigen Lauf meldete die Seite bisher weiter wartende
+  Dateien, obwohl nur Textdateien und Beidateien liegen geblieben waren.
+- Die Seite holt ihre Zahlen selbst, sobald das Fenster wieder nach vorn kommt.
+- Das Protokoll wird im Reiter Protokolle gesetzt dargestellt, nicht mehr als
+  Markdown-Quelltext.
+- Eine Vorschau endet nicht mehr mit „Verschoben: 0" und einem Protokollpfad, den es
+  nicht gibt, sondern mit der Zahl der Dateien, die verschoben würden.
+
 ## 1.1.0 – 2026-10-11
 
 Aus dem Betatest: Ein Lauf mit 480 großen Bildern sah aus, als hänge das Programm.

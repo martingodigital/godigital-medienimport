@@ -385,8 +385,21 @@ if (-not (Test-Path -LiteralPath $Protokolle -PathType Container)) {
 
 $ergebnisse    = New-Object System.Collections.Generic.List[object]
 $geplanteZiele = New-Object System.Collections.Generic.HashSet[string]
-$verschoben    = 0
-$uebersprungen = 0
+# Zu jedem belegten Zielnamen die Quelldatei, die ihn belegt hat. Ohne diese
+# Zuordnung kuendigt die Vorschau fuer zwei gleiche Dateien im selben Lauf einen
+# Zaehler an, waehrend der echte Lauf die zweite als Dublette ueberspringt: Beim
+# echten Lauf liegt die erste Datei dann schon am Ziel und laesst sich
+# vergleichen, in der Vorschau nicht.
+$geplanteQuelle    = New-Object 'System.Collections.Generic.Dictionary[string,string]'
+$verschoben        = 0
+$uebersprungen     = 0
+# Nur fuer die Vorschau: Was verschoben wuerde. Im echten Lauf zaehlt
+# $verschoben, der erst innerhalb von ShouldProcess hochgeht.
+$geplant           = 0
+# Dateien, deren Datum aus dem Dateisystem stammt. Wer eine Speicherkarte erst
+# auf die Platte kopiert und dann importiert, sortiert sonst einen ganzen
+# Schwung unter dem heutigen Datum ein, ohne es zu bemerken.
+$ohneAufnahmedatum = 0
 
 if ($Reorganisieren) {
     # ============ MODUS: bestehende Mediathek einsortieren ===================
@@ -444,6 +457,8 @@ if ($Reorganisieren) {
                 $ergebnisse.Add([pscustomobject]@{Status="FEHLER"; Alt=$f.Name; Neu=(Join-Path $unter $f.Name); Grund=$_.Exception.Message})
                 $uebersprungen++
             }
+        } else {
+            $geplant++   # nur die Vorschau, siehe Schlusszeile
         }
     }
 
@@ -635,7 +650,19 @@ if ($Reorganisieren) {
 
             # --- Kollision: Dublette oder Namensgleichheit? ---------------------
             if ((Test-Path -LiteralPath $ziel) -or $geplanteZiele.Contains($ziel.ToLowerInvariant())) {
-                if ((Test-Path -LiteralPath $ziel) -and (Test-GleicheDatei -A $quelle -B $ziel)) {
+                # Womit wird verglichen? Mit der Datei am Ziel, wenn es sie schon
+                # gibt - sonst mit der Quelldatei, die diesen Zielnamen in
+                # diesem Lauf belegt hat. Der zweite Fall tritt nur in der
+                # Vorschau auf, wo noch nichts verschoben wurde; ohne ihn
+                # kuendigt die Vorschau einen Zaehler an und der echte Lauf
+                # ueberspringt dieselbe Datei als Dublette.
+                $vergleichsDatei = $null
+                if (Test-Path -LiteralPath $ziel) {
+                    $vergleichsDatei = $ziel
+                } elseif ($geplanteQuelle.ContainsKey($ziel.ToLowerInvariant())) {
+                    $vergleichsDatei = $geplanteQuelle[$ziel.ToLowerInvariant()]
+                }
+                if ($vergleichsDatei -and (Test-GleicheDatei -A $quelle -B $vergleichsDatei)) {
                     Write-Host "SKIP '$dateiName' - Dublette, identische Datei vorhanden" -ForegroundColor Yellow
                     $ergebnisse.Add([pscustomobject]@{Status="SKIP"; Alt=$dateiName; Neu=(Join-Path $unter $neuerName); Grund="Dublette, identische Datei vorhanden"})
                     $uebersprungen++; continue
@@ -653,12 +680,26 @@ if ($Reorganisieren) {
             }
 
             [void]$geplanteZiele.Add($ziel.ToLowerInvariant())
+            $geplanteQuelle[$ziel.ToLowerInvariant()] = $quelle
+            if ($datumsGrund -eq "Datum aus Dateisystem") { $ohneAufnahmedatum++ }
 
-            if ($PSCmdlet.ShouldProcess($quelle, "Verschieben nach '$ziel'")) {
+            # Der Zusatz steht im Text von ShouldProcess und damit auch in der
+            # WhatIf-Zeile: Nur so kann die Vorschau - die keine OK-Zeilen
+            # kennt - ein geschaetztes Datum von einem echten unterscheiden.
+            $vorgang = "Verschieben nach '$ziel'"
+            if ($datumsGrund -eq "Datum aus Dateisystem") { $vorgang += " (Datum aus Dateisystem)" }
+
+            if ($PSCmdlet.ShouldProcess($quelle, $vorgang)) {
                 try {
                     if (-not (Test-Path -LiteralPath $zielOrdner)) { New-Item -ItemType Directory -Path $zielOrdner -Force | Out-Null }
                     Move-Item -LiteralPath $quelle -Destination $ziel -ErrorAction Stop
-                    Write-Host "OK '$dateiName' -> '$(Join-Path $unter $neuerName)'" -ForegroundColor Green
+                    # Der Grund steht in Klammern dahinter, damit die Weboberflaeche
+                    # ihn anzeigen kann: Bisher stand "Datum aus Dateisystem" nur im
+                    # Protokoll, und ein geschaetztes Datum sah auf der Seite aus wie
+                    # ein echtes. Der Parser im Dienst kennt die Klammer.
+                    $okZeile = "OK '$dateiName' -> '$(Join-Path $unter $neuerName)'"
+                    if ($grund) { $okZeile += " ($grund)" }
+                    Write-Host $okZeile -ForegroundColor Green
                     $ergebnisse.Add([pscustomobject]@{Status="OK"; Alt=$dateiName; Neu=(Join-Path $unter $neuerName); Grund=$grund})
                     $verschoben++
                     if ($null -ne $e.FileSize) { $erledigtBytes += [long]$e.FileSize }
@@ -667,6 +708,11 @@ if ($Reorganisieren) {
                     $ergebnisse.Add([pscustomobject]@{Status="FEHLER"; Alt=$dateiName; Neu=(Join-Path $unter $neuerName); Grund=$_.Exception.Message})
                     $uebersprungen++
                 }
+            } else {
+                # Nur die Vorschau kommt hier an: ShouldProcess gibt dann false
+                # zurueck. Ohne diesen Zaehler wuesste die Schlusszeile nicht,
+                # wie viele Dateien verschoben wuerden.
+                $geplant++
             }
         }
         $uhrEinsortieren.Stop()
@@ -731,6 +777,11 @@ if (-not $Reorganisieren) {
 [void]$md.AppendLine("|-----------:|-------------:|-------:|")
 [void]$md.AppendLine("| $verschoben | $uebersprungen | $($ergebnisse.Count) |")
 [void]$md.AppendLine("")
+if ($ohneAufnahmedatum -gt 0) {
+    $satzDatum = if ($ohneAufnahmedatum -eq 1) { "Eine Datei hatte" } else { "$ohneAufnahmedatum Dateien hatten" }
+    [void]$md.AppendLine("$satzDatum kein Aufnahmedatum; verwendet wurde das Änderungsdatum der Datei.")
+    [void]$md.AppendLine("")
+}
 if ($ergebnisse.Count -gt 0) {
     [void]$md.AppendLine("## Details")
     [void]$md.AppendLine("| Status | Datei (alt) | Ziel (relativ zur Mediathek) | Grund |")
@@ -747,8 +798,35 @@ $md.ToString() | Set-Content -LiteralPath $protokollDatei -Encoding UTF8
 
 # --- Zusammenfassung ---------------------------------------------------------
 Write-Host ""
-Write-Host "Fertig ($modusText). Verschoben: $verschoben, Übersprungen: $uebersprungen" -ForegroundColor Cyan
-Write-Host "Protokoll: $protokollDatei" -ForegroundColor Cyan
+if ($WhatIfPreference) {
+    # Die Vorschau hat nichts verschoben und kein Protokoll geschrieben. Die
+    # frueheren Zeilen "Verschoben: 0" und "Protokoll: ..." stimmten beide
+    # nicht - gelesen hat sie trotzdem jeder, der die Vorschau per Doppelklick
+    # startet. Die Weboberflaeche wertet die WhatIf-Zeilen aus und ist davon
+    # nicht betroffen.
+    $wortGeplant = switch ($geplant) {
+        0       { "Keine Datei würde verschoben" }
+        1       { "1 Datei würde verschoben" }
+        default { "$geplant Dateien würden verschoben" }
+    }
+    $wortRest = switch ($uebersprungen) {
+        0       { "keine bliebe liegen" }
+        1       { "1 bliebe liegen" }
+        default { "$uebersprungen blieben liegen" }
+    }
+    Write-Host "Vorschau beendet ($modusText). $wortGeplant, $wortRest." -ForegroundColor Cyan
+    Write-Host "Es wurde nichts verändert und kein Protokoll geschrieben." -ForegroundColor Cyan
+} else {
+    Write-Host "Fertig ($modusText). Verschoben: $verschoben, Übersprungen: $uebersprungen" -ForegroundColor Cyan
+    Write-Host "Protokoll: $protokollDatei" -ForegroundColor Cyan
+}
+# Ein Dateidatum ist kein Aufnahmedatum. Wer eine Speicherkarte erst auf die
+# Platte kopiert und dann importiert, sortiert sonst einen ganzen Schwung unter
+# dem heutigen Tag ein, ohne es zu bemerken.
+if ($ohneAufnahmedatum -gt 0) {
+    $wortDatum = if ($ohneAufnahmedatum -eq 1) { "Eine Datei hatte" } else { "$ohneAufnahmedatum Dateien hatten" }
+    Write-Host "$wortDatum kein Aufnahmedatum; verwendet wurde das Änderungsdatum der Datei." -ForegroundColor Yellow
+}
 # Diese beiden Zeilen stehen bewusst NACH "Protokoll:": Die Weboberflaeche liest
 # die Ausgabe zeilenweise gegen feste Muster, und die bisherige Reihenfolge der
 # erkannten Zeilen bleibt damit unangetastet.

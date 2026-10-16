@@ -250,21 +250,31 @@ function Read-SkriptAusgabe {
                     quelleName = [System.IO.Path]::GetFileName($quelle)
                     zielOrdner = [System.IO.Path]::GetDirectoryName($relativ)
                     zielName   = [System.IO.Path]::GetFileName($ziel)
+                    # Der Motor haengt diesen Zusatz an den ShouldProcess-Text,
+                    # wenn das Datum aus dem Dateisystem stammt. Bewusst gegen
+                    # den festen Wortlaut geprueft und nicht gegen eine
+                    # beliebige Klammer: Pfade duerfen Klammern enthalten.
+                    geschaetzt = ($z -match '\(Datum aus Dateisystem\)')
                 })
             }
             continue
         }
 
+        # Die drei Zeilen tragen jeweils ein eigenes Feld "ziel": Frueher stand
+        # bei OK der Zielpfad in der Spalte "Grund", und ein geschaetztes Datum
+        # war auf der Seite von einem echten nicht zu unterscheiden.
         if ($z -match '^SKIP\s+''(.+?)''\s*-\s*(.+)$') {
-            $meldungen.Add([pscustomobject]@{ status = "SKIP"; datei = $Matches[1]; grund = $Matches[2] })
+            $meldungen.Add([pscustomobject]@{ status = "SKIP"; datei = $Matches[1]; ziel = ""; grund = $Matches[2] })
             continue
         }
         if ($z -match '^FEHLER\s+''(.+?)''\s*:\s*(.+)$') {
-            $meldungen.Add([pscustomobject]@{ status = "FEHLER"; datei = $Matches[1]; grund = $Matches[2] })
+            $meldungen.Add([pscustomobject]@{ status = "FEHLER"; datei = $Matches[1]; ziel = ""; grund = $Matches[2] })
             continue
         }
-        if ($z -match '^OK\s+''(.+?)''\s*->\s*''(.+?)''\s*$') {
-            $meldungen.Add([pscustomobject]@{ status = "OK"; datei = $Matches[1]; grund = $Matches[2] })
+        # Der Grund in Klammern ist freiwillig: Der Reorganisieren-Modus schreibt
+        # keinen, und eine Datei mit echtem Aufnahmedatum hat keinen.
+        if ($z -match '^OK\s+''(.+?)''\s*->\s*''(.+?)''(?:\s+\((.+)\))?\s*$') {
+            $meldungen.Add([pscustomobject]@{ status = "OK"; datei = $Matches[1]; ziel = $Matches[2]; grund = $Matches[3] })
             continue
         }
         if ($z -match '^Protokoll:\s*(.+)$') { $protokoll = $Matches[1].Trim(); continue }
@@ -444,8 +454,21 @@ function Get-Lage {
     $programmInDerInbox = (Test-LiegtInnerhalb -Unten $Root -Oben $pfade.Inbox)
     $programmOrdner     = $Root.TrimEnd('\') + '\'
 
-    $inboxDateien = 0
-    $inboxOrdner  = @()
+    # Namens- und Endungsfilter wie beim Motor, damit die zweite Zahl unten
+    # stimmt. Der Motor zieht dieselben Werte aus derselben Datei.
+    $praefix = ""
+    if ($roh.Konfig -and ($roh.Konfig.PSObject.Properties.Name -contains 'Praefix') -and $roh.Konfig.Praefix) {
+        $praefix = [string]$roh.Konfig.Praefix
+    }
+    $typen = $standardErweiterungen
+    if ($roh.Konfig -and ($roh.Konfig.PSObject.Properties.Name -contains 'Erweiterungen') -and $null -ne $roh.Konfig.Erweiterungen) {
+        $typen = @($roh.Konfig.Erweiterungen)
+    }
+    $typen = @($typen | ForEach-Object { ([string]$_).TrimStart('.').ToLowerInvariant() } | Where-Object { $_ })
+
+    $inboxDateien      = 0
+    $inboxZuImportieren = 0
+    $inboxOrdner       = @()
     $inboxDa = Test-Path -LiteralPath $pfade.Inbox -PathType Container
     if ($inboxDa) {
         $dateien = @(Get-ChildItem -LiteralPath $pfade.Inbox -File -Recurse -ErrorAction SilentlyContinue)
@@ -456,6 +479,19 @@ function Get-Lage {
         }
         $inboxDateien = $dateien.Count
         $inboxOrdner  = @($ordner | Select-Object -ExpandProperty Name)
+
+        # Die Gesamtzahl allein liest sich nach unerledigter Arbeit: Nach einem
+        # vollstaendigen Import bleiben Textdateien, XMP-Beidateien und
+        # Thumbs.db liegen, die nie importiert werden. Eine leere Typenliste
+        # schaltet den Filter ab, genau wie im Motor.
+        $kandidaten = $dateien
+        if ($praefix) {
+            $kandidaten = @($kandidaten | Where-Object { $_.Name.StartsWith($praefix, [System.StringComparison]::OrdinalIgnoreCase) })
+        }
+        if ($typen.Count -gt 0) {
+            $kandidaten = @($kandidaten | Where-Object { $typen -contains $_.Extension.TrimStart('.').ToLowerInvariant() })
+        }
+        $inboxZuImportieren = $kandidaten.Count
     }
     $mediathekDateien = 0
     $mediathekDa = Test-Path -LiteralPath $pfade.Mediathek -PathType Container
@@ -478,6 +514,7 @@ function Get-Lage {
         inbox              = $pfade.Inbox
         inboxVorhanden     = $inboxDa
         inboxDateien       = $inboxDateien
+        inboxZuImportieren = $inboxZuImportieren
         inboxOrdner        = $inboxOrdner
         mediathek          = $pfade.Mediathek
         mediathekVorhanden = $mediathekDa

@@ -328,6 +328,12 @@
   .marke.FEHLER,
   .marke.ABBRUCH  { background: var(--fehler-grund); color: var(--fehler); }
   .marke.HINWEIS  { background: var(--senke);        color: var(--leise); }
+  /* Geschätztes Datum: auffällig genug, um es vor dem Lauf zu bemerken, aber
+     kein Fehler — die Datei wird ja eingeordnet. */
+  .marke.GESCHAETZT { background: var(--warn-grund); color: var(--warn); font-weight: 600; }
+  td.geschaetzt   { color: var(--warn); }
+  .datumshinweis  { margin-top: 14px; color: var(--warn); }
+  .datumshinweis b { color: var(--warn); }
 
   /* --- Protokolle --- */
   .protokollliste { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
@@ -339,6 +345,33 @@
   .protokollliste button[aria-pressed="true"] {
     background: var(--stempel-grund); border-color: var(--stempel); color: var(--stempel); font-weight: 600;
   }
+  /* Das gesetzte Protokoll. Dieselben Tabellen wie im Reiter Import, damit
+     dieselben Daten nicht zweimal verschieden aussehen. */
+  .protokoll h2 {
+    font: 650 19px/1.3 var(--display); margin: 0 0 14px;
+  }
+  .protokoll h3 {
+    font: 650 14px/1.3 var(--sans); margin: 26px 0 10px;
+    letter-spacing: .02em; color: var(--leise); text-transform: uppercase; font-size: 11.5px;
+  }
+  .protokoll dl {
+    display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px;
+    margin: 0 0 18px; font-size: 13px;
+  }
+  .protokoll dt { color: var(--leise); }
+  .protokoll dd { margin: 0; overflow-wrap: anywhere; }
+  .protokoll code {
+    font: 12px/1.5 var(--mono); background: var(--senke);
+    border: 1px solid var(--linie); border-radius: 4px; padding: 1px 5px;
+  }
+  .protokoll p { margin: 0 0 16px; font-size: 13px; }
+  .protokoll p.geschaetzt { color: var(--warn); }
+  .protokoll .tabellenrahmen { margin-bottom: 18px; }
+  @media (max-width: 560px) {
+    .protokoll dl { grid-template-columns: 1fr; gap: 0 0; }
+    .protokoll dt { margin-top: 8px; }
+  }
+
   pre {
     margin: 0; background: var(--senke); border: 1px solid var(--linie); border-radius: var(--rund-s);
     padding: 14px 16px; overflow-x: auto;
@@ -668,11 +701,24 @@ function kennzahl(zahl, was, symbol, hervor) {
   return d;
 }
 
+/* Der erste und oft einzige Satz, den jemand liest. Er muss nach einem
+   vollständigen Import aufhören, nach unerledigter Arbeit auszusehen: Was dann
+   noch liegt, sind Textdateien, Beidateien und Thumbs.db — nichts davon wird je
+   importiert. */
 function lagesatz(l) {
+  var zu = (l.inboxZuImportieren === undefined || l.inboxZuImportieren === null)
+    ? l.inboxDateien : l.inboxZuImportieren;
   if (!l.inboxVorhanden) return { text: "Die Inbox fehlt", ruht: true };
   if (l.inboxDateien === 0) return { text: "Die Inbox ist leer", ruht: true };
-  if (l.inboxDateien === 1) return { text: "Eine Datei wartet in der Inbox", ruht: false };
-  return { text: l.inboxDateien + " Dateien warten in der Inbox", ruht: false };
+  if (zu === 0) {
+    return {
+      text: (l.inboxDateien === 1 ? "Eine Datei" : l.inboxDateien + " Dateien") +
+            " in der Inbox, davon keine zu importieren",
+      ruht: true
+    };
+  }
+  if (zu === 1) return { text: "Eine Datei wartet in der Inbox", ruht: false };
+  return { text: zu + " Dateien warten in der Inbox", ruht: false };
 }
 
 async function ladeLage() {
@@ -687,7 +733,15 @@ async function ladeLage() {
     el("ortMediathek").textContent = "Mediathek: " + l.mediathek;
 
     el("lage").innerHTML = "";
-    el("lage").appendChild(kennzahl(l.inboxDateien, l.inboxDateien === 1 ? "Datei in der Inbox" : "Dateien in der Inbox", "inbox", l.inboxDateien > 0));
+    /* Liegt in der Inbox mehr, als der Import anfasst, zeigt die Kachel die
+       Zahl, auf die es ankommt, und nennt die Gesamtzahl daneben. */
+    var zu = (l.inboxZuImportieren === undefined || l.inboxZuImportieren === null)
+      ? l.inboxDateien : l.inboxZuImportieren;
+    if (zu === l.inboxDateien) {
+      el("lage").appendChild(kennzahl(l.inboxDateien, l.inboxDateien === 1 ? "Datei in der Inbox" : "Dateien in der Inbox", "inbox", l.inboxDateien > 0));
+    } else {
+      el("lage").appendChild(kennzahl(zu, "von " + l.inboxDateien + " in der Inbox zu importieren", "inbox", zu > 0));
+    }
     el("lage").appendChild(kennzahl(l.inboxOrdner.length, "Ereignisordner", "ereignis", l.inboxOrdner.length > 0));
     el("lage").appendChild(kennzahl(l.mediathekDateien, "in der Mediathek", "mediathek", false));
 
@@ -884,11 +938,35 @@ function abbruchGrund(d) {
   return null;
 }
 
+/* Ein Datum aus dem Dateisystem ist geraten, nicht aufgenommen. Wer eine
+   Speicherkarte erst auf die Platte kopiert und dann importiert, bekommt sonst
+   einen ganzen Schwung Dateien unter dem heutigen Tag, ohne es zu merken. */
+function istGeschaetzt(m) {
+  return String(m.grund || "").indexOf("Datum aus Dateisystem") >= 0;
+}
+
+function datumshinweis(anzahl) {
+  var p = document.createElement("p");
+  p.className = "ueberschrift datumshinweis";
+  var b = document.createElement("b");
+  b.textContent = anzahl;
+  p.appendChild(b);
+  p.appendChild(document.createTextNode(anzahl === 1
+    ? " Datei ohne Aufnahmedatum — eingeordnet nach dem Änderungsdatum der Datei"
+    : " Dateien ohne Aufnahmedatum — eingeordnet nach dem Änderungsdatum der Datei"));
+  return p;
+}
+
 function meldungsTabelle(meldungen) {
   var rahmen = document.createElement("div");
   rahmen.className = "tabellenrahmen";
   var t = document.createElement("table");
-  t.innerHTML = "<thead><tr><th>Status</th><th>Datei</th><th>Grund</th></tr></thead>";
+  /* Ziel und Grund sind zwei Spalten, so wie im Protokoll. Vorher stand bei
+     jeder OK-Zeile der Zielpfad in der Spalte "Grund". Eine Tabelle nur aus
+     SKIP-Zeilen kennt kein Ziel; dann bleibt die Spalte weg statt leer. */
+  var mitZiel = meldungen.some(function (m) { return m.ziel; });
+  t.innerHTML = "<thead><tr><th>Status</th><th>Datei</th>" +
+                (mitZiel ? "<th>Ziel</th>" : "") + "<th>Grund</th></tr></thead>";
   var koerper = document.createElement("tbody");
   meldungen.forEach(function (m) {
     var tr = document.createElement("tr");
@@ -897,9 +975,15 @@ function meldungsTabelle(meldungen) {
     marke.className = "marke " + m.status;
     marke.textContent = m.status;
     td1.appendChild(marke);
-    var td2 = document.createElement("td"); td2.className = "pfad"; td2.textContent = m.datei;
-    var td3 = document.createElement("td"); td3.textContent = m.grund;
-    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+    var td2 = document.createElement("td"); td2.className = "pfad"; td2.textContent = m.datei || "";
+    var td4 = document.createElement("td"); td4.textContent = m.grund || "";
+    if (istGeschaetzt(m)) td4.className = "geschaetzt";
+    tr.appendChild(td1); tr.appendChild(td2);
+    if (mitZiel) {
+      var td3 = document.createElement("td"); td3.className = "pfad"; td3.textContent = m.ziel || "";
+      tr.appendChild(td3);
+    }
+    tr.appendChild(td4);
     koerper.appendChild(tr);
   });
   t.appendChild(koerper);
@@ -947,12 +1031,25 @@ function zeigeVorschau(d) {
       var td2 = document.createElement("td"); td2.className = "pfeil"; td2.textContent = "→";
       var td3 = document.createElement("td"); td3.className = "pfad"; td3.textContent = a.zielOrdner || "(Wurzel)";
       var td4 = document.createElement("td"); td4.className = "pfad"; td4.textContent = a.zielName;
+      /* Der Motor meldet in der WhatIf-Zeile mit, wenn das Datum nur aus dem
+         Dateisystem stammt. Hier ist der letzte Moment, in dem sich das noch
+         ohne Aufwand richtigstellen lässt. */
+      if (a.geschaetzt) {
+        var marke = document.createElement("span");
+        marke.className = "marke GESCHAETZT";
+        marke.textContent = "Datum geschätzt";
+        td4.appendChild(document.createElement("br"));
+        td4.appendChild(marke);
+      }
       tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
       koerper.appendChild(tr);
     });
     t.appendChild(koerper);
     rahmen.appendChild(t);
     kasten.appendChild(rahmen);
+
+    var geraten = aktionen.filter(function (a) { return a.geschaetzt; }).length;
+    if (geraten) kasten.appendChild(datumshinweis(geraten));
   }
 
   if (rest.length) {
@@ -986,6 +1083,8 @@ function zeigeErgebnis(d) {
   if ((d.meldungen || []).length) {
     var kasten = document.createElement("div");
     kasten.className = "ergebnis";
+    var geraten = d.meldungen.filter(istGeschaetzt).length;
+    if (geraten) kasten.appendChild(datumshinweis(geraten));
     kasten.appendChild(meldungsTabelle(d.meldungen));
     bereich.appendChild(kasten);
   }
@@ -1025,14 +1124,152 @@ async function ladeProtokolle() {
   }
 }
 
+/* ---------- Protokoll setzen ----------
+   Das Protokoll ist der Nachweis, was mit den Bildern geschehen ist; es war
+   bisher die am schlechtesten lesbare Ansicht des Programms. Kein Markdown-
+   Übersetzer von außen: Die Seite lädt nichts nach, und das Format der eigenen
+   Protokolle steht fest — Überschrift, Kopfzeilen als Liste, zwei Tabellen,
+   dazwischen einzelne Sätze. */
+
+/* **fett** und `code` innerhalb einer Zeile. Alles andere bleibt Text;
+   eingesetzt wird über textContent, nie über innerHTML.
+   Kursiv mit Unterstrichen gibt es hier bewusst nicht: Jeder Dateiname im
+   Protokoll trägt Unterstriche (20260910_101530_IMG.JPG), und eine solche
+   Regel fräse mitten durch die Namen. */
+function inline(text) {
+  var teil = document.createDocumentFragment();
+  var rest = String(text);
+  var muster = /(\*\*[^*]+\*\*|`[^`]+`)/;
+  while (rest.length) {
+    var treffer = muster.exec(rest);
+    if (!treffer) { teil.appendChild(document.createTextNode(rest)); break; }
+    if (treffer.index > 0) teil.appendChild(document.createTextNode(rest.slice(0, treffer.index)));
+    var st = treffer[0];
+    var knoten;
+    if (st.slice(0, 2) === "**") { knoten = document.createElement("b");    knoten.textContent = st.slice(2, -2); }
+    else                         { knoten = document.createElement("code"); knoten.textContent = st.slice(1, -1); }
+    teil.appendChild(knoten);
+    rest = rest.slice(treffer.index + st.length);
+  }
+  return teil;
+}
+
+function zeileZuZellen(zeile) {
+  return zeile.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map(function (z) { return z.trim(); });
+}
+
+function protokollTabelle(block) {
+  var rahmen = document.createElement("div");
+  rahmen.className = "tabellenrahmen";
+  var t = document.createElement("table");
+
+  var kopf = document.createElement("thead");
+  var kz = document.createElement("tr");
+  var spalten = zeileZuZellen(block[0]);
+  spalten.forEach(function (z) {
+    var th = document.createElement("th");
+    th.textContent = z;
+    kz.appendChild(th);
+  });
+  kopf.appendChild(kz);
+  t.appendChild(kopf);
+  /* Dateinamen und Pfade in der Schreibmaschinenschrift, Fließtext nicht. */
+  var monoSpalte = spalten.map(function (s) { return /datei|ziel/i.test(s); });
+
+  var koerper = document.createElement("tbody");
+  /* Zeile 1 ist die Trennzeile |---|---| und entfällt. */
+  block.slice(2).forEach(function (zeile) {
+    var tr = document.createElement("tr");
+    zeileZuZellen(zeile).forEach(function (wert, i) {
+      var td = document.createElement("td");
+      if (i === 0 && /^(OK|SKIP|FEHLER)$/.test(wert)) {
+        var marke = document.createElement("span");
+        marke.className = "marke " + wert;
+        marke.textContent = wert;
+        td.appendChild(marke);
+      } else {
+        td.appendChild(inline(wert));
+        if (monoSpalte[i]) td.className = "pfad";
+        if (wert.indexOf("Datum aus Dateisystem") >= 0) td.className = "geschaetzt";
+      }
+      tr.appendChild(td);
+    });
+    koerper.appendChild(tr);
+  });
+  t.appendChild(koerper);
+  rahmen.appendChild(t);
+  return rahmen;
+}
+
+function protokollAlsHtml(text) {
+  var wurzel = document.createElement("div");
+  wurzel.className = "protokoll";
+  var zeilen = String(text).replace(/^﻿/, "").split(/\r?\n/);
+  var i = 0;
+  while (i < zeilen.length) {
+    var z = zeilen[i];
+
+    if (/^\s*$/.test(z)) { i++; continue; }
+
+    if (z.indexOf("## ") === 0) {
+      var h3 = document.createElement("h3"); h3.textContent = z.slice(3).trim();
+      wurzel.appendChild(h3); i++; continue;
+    }
+    if (z.indexOf("# ") === 0) {
+      var h2 = document.createElement("h2"); h2.textContent = z.slice(2).trim();
+      wurzel.appendChild(h2); i++; continue;
+    }
+
+    if (z.indexOf("|") === 0) {
+      var block = [];
+      while (i < zeilen.length && zeilen[i].indexOf("|") === 0) { block.push(zeilen[i]); i++; }
+      if (block.length >= 2) wurzel.appendChild(protokollTabelle(block));
+      continue;
+    }
+
+    if (z.indexOf("- ") === 0) {
+      var dl = document.createElement("dl");
+      while (i < zeilen.length && zeilen[i].indexOf("- ") === 0) {
+        var inhalt = zeilen[i].slice(2);
+        var paar = /^\*\*(.+?):\*\*\s*(.*)$/.exec(inhalt);
+        if (paar) {
+          var dt = document.createElement("dt"); dt.textContent = paar[1];
+          var dd = document.createElement("dd"); dd.appendChild(inline(paar[2]));
+          dl.appendChild(dt); dl.appendChild(dd);
+        } else {
+          var dd2 = document.createElement("dd"); dd2.appendChild(inline(inhalt));
+          dl.appendChild(dd2);
+        }
+        i++;
+      }
+      wurzel.appendChild(dl);
+      continue;
+    }
+
+    var p = document.createElement("p");
+    if (z.indexOf("kein Aufnahmedatum") >= 0) p.className = "geschaetzt";
+    /* Eine ganze Zeile in Unterstrichen ist kursiv gemeint - das Protokoll
+       nutzt das für "_Keine passenden Dateien verarbeitet._". */
+    var kursiv = /^_(.+)_$/.exec(z);
+    if (kursiv) {
+      var ital = document.createElement("i");
+      ital.textContent = kursiv[1];
+      p.appendChild(ital);
+    } else {
+      p.appendChild(inline(z));
+    }
+    wurzel.appendChild(p);
+    i++;
+  }
+  return wurzel;
+}
+
 async function zeigeProtokoll(name) {
   try {
     var d = await ruf("/api/protokoll?name=" + encodeURIComponent(name));
     var ziel = el("protokollinhalt");
     ziel.innerHTML = "";
-    var pre = document.createElement("pre");
-    pre.textContent = d.inhalt;
-    ziel.appendChild(pre);
+    ziel.appendChild(protokollAlsHtml(d.inhalt));
   } catch (e) {
     hinweis(el("protokollinhalt"), "fehler", e.message);
   }
@@ -1085,6 +1322,18 @@ async function ladeLetzteLaeufe() {
     kasten.hidden = true;
   }
 }
+
+/* ---------- Auffrischen ----------
+   Wer Fotos vom Handy in die Inbox kopiert und zurück in den Browser wechselt,
+   sah bisher die alten Zahlen. Genau dieser Wechsel ist der Moment, in dem sich
+   etwas geändert hat. Kein Timer: Der Dienst bedient eine Anfrage nach der
+   anderen, und während eines Imports hätte er Besseres zu tun. */
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible") return;
+  if (el("knopfVorschau").disabled) return;   // es läuft gerade etwas
+  ladeLage();
+  ladeLetzteLaeufe();
+});
 
 /* ---------- Start ---------- */
 if (!token) {

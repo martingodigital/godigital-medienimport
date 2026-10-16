@@ -180,9 +180,16 @@ Videodatei kostet sonst unnötig Zeit. Die Funktion nutzt bewusst `System.IO` un
 Windows PowerShell 5.1 bei `-WhatIf` ihre Provider-Zugriffe und verrauschen die Vorschau.
 Neue rein lesende Prüfungen bitte genauso bauen.
 
-**Kollisionen** führen nie zum Überschreiben. Der Inhalt wird allerdings erst verglichen,
-wenn der **Zielname** belegt ist; eine Dublette unter anderem Namen erkennt das Skript
-nicht. Deshalb ist die Regel zu den bereits benannten Dateien oben kein Schönheitsfix,
+**Kollisionen** führen nie zum Überschreiben. Verglichen wird mit der Datei am Ziel, wenn
+es sie schon gibt – sonst mit der Quelldatei, die denselben Zielnamen in diesem Lauf
+belegt hat (`$geplanteQuelle`, Zielname → Quellpfad). Der zweite Fall tritt nur in der
+Vorschau auf, wo noch nichts verschoben wurde. Ohne ihn kündigte die Vorschau für zwei
+gleiche Dateien im selben Lauf einen Zähler an, während der echte Lauf die zweite als
+Dublette übersprang – die Vorschau sagte also etwas anderes, als dann geschah, und genau
+auf ihr beruht das Vertrauen in das Programm.
+
+Der Inhalt wird allerdings erst verglichen, wenn der **Zielname** belegt ist; eine Dublette
+unter anderem Namen erkennt das Skript nicht. Deshalb ist die Regel zu den bereits benannten Dateien oben kein Schönheitsfix,
 sondern Voraussetzung dafür, dass ein zweiter Import überhaupt als Dublette auffällt.
 Identische Datei: `SKIP` mit Grund „Dublette, identische Datei vorhanden". Verschiedene
 Datei: `Get-FreierZielName` hängt einen Zähler an, bis `_999`; danach gibt sie auf, und die
@@ -243,8 +250,13 @@ Anzeige, die Vorschau verschiebt ja nichts.
 
 **Neue Ausgabezeilen müssen gegen `Read-SkriptAusgabe` geprüft werden.** Die Funktion im
 Dienst prüft jede Zeile gegen feste Muster. `OK`/`SKIP`/`FEHLER` sind mit `^` und `$`
-verankert – ein vorangestellter oder angehängter Zähler bricht sie, diese drei Zeilen
-bleiben zeichengleich. Eine neue Zeile darf
+verankert – ein vorangestellter oder angehängter Zähler bricht sie. Die `OK`-Zeile trägt
+seit 1.2.0 den Grund in Klammern hinter dem Ziel (`OK 'a.JPG' -> '2026\…' (Datum aus
+Dateisystem)`); die Klammer ist im Muster als optionale dritte Fangklammer vorgesehen.
+Motor und Parser gehören hier zusammen: Wer die eine Zeile anfasst, ändert das Muster mit.
+Jede Meldung trägt seitdem `status`, `datei`, `ziel` und `grund` als eigene Felder – vorher
+stand bei `OK` der Zielpfad in der Spalte „Grund", während das Protokoll es längst richtig
+machte. Eine neue Zeile darf
 
 - nicht mit `OK `, `SKIP `, `FEHLER`, `Protokoll:`, `WARNUNG` oder `Keine Dateien` beginnen;
 - nicht mit `ExifTool nicht gefunden`, `Inbox-Ordner existiert nicht`, `JSON-Fehler` oder
@@ -256,7 +268,24 @@ bleiben zeichengleich. Eine neue Zeile darf
   Dateibewegung in der Vorschautabelle.
 
 Die Zeilen `Zeiten:` und `Durchsatz:` stehen deshalb **nach** `Protokoll:` – die Reihenfolge
-der erkannten Zeilen bleibt damit unangetastet.
+der erkannten Zeilen bleibt damit unangetastet. Dasselbe gilt für die Zeile über die
+Dateien ohne Aufnahmedatum.
+
+**Die Schlusszeilen unterscheiden Vorschau und Lauf.** Ein echter Lauf meldet „Fertig …
+Verschoben: n, Übersprungen: m" und darunter den Protokollpfad. Eine Vorschau meldet
+stattdessen „Vorschau beendet … n Dateien würden verschoben, m blieben liegen." und
+„Es wurde nichts verändert und kein Protokoll geschrieben." – beides trifft zu, die alten
+Zeilen taten es nicht: Eine Vorschau verschob nie etwas und legte nie das genannte
+Protokoll an. Gezählt wird dafür `$geplant` im `else`-Zweig von `ShouldProcess`; `$verschoben`
+geht nur im echten Lauf hoch. Die neue Zeile darf das Muster `Verschoben:\s*(\d+),…` nicht
+treffen, sonst liest der Dienst die Vorschau als abgeschlossenen Lauf.
+
+**Ein geschätztes Datum steht auch im Text von `ShouldProcess`.** Stammt das Datum aus dem
+Dateisystem, hängt der Motor ` (Datum aus Dateisystem)` an den Vorgangstext; die Angabe
+steht damit in der `WhatIf:`-Zeile, und die Vorschau kann die betroffenen Dateien
+auszeichnen, obwohl sie keine `OK`-Zeilen kennt. `Read-SkriptAusgabe` prüft dafür auf genau
+diesen Wortlaut (`geschaetzt`-Feld je Aktion) und nicht auf eine beliebige Klammer: Pfade
+dürfen Klammern enthalten.
 
 **Laufwerke.** `Test-GleichesLaufwerk` vergleicht die `GetPathRoot` von Inbox und Mediathek.
 Auf demselben Laufwerk ist `Move-Item` ein Umbenennen und kostet nichts; über eine
@@ -323,6 +352,25 @@ dem Browser nicht verboten, und `/api/import` verschiebt Dateien. Zusätzlich wi
 `Host`-Kopf gegen `127.0.0.1`/`localhost` geprüft (DNS-Rebinding), und `/api/protokoll`
 akzeptiert nur Namen nach dem Muster `protokoll_<ziffern>.md`, damit darüber keine beliebigen
 Dateien lesbar werden.
+
+**`Get-Lage` zählt zweimal.** `inboxDateien` ist der ganze Inbox-Baum, `inboxZuImportieren`
+nur das, was Namens- und Endungsfilter übrig lassen – dieselben Werte aus derselben Datei,
+die auch der Motor zieht. Ohne die zweite Zahl meldete die Seite nach einem vollständigen
+Import weiter wartende Dateien, obwohl nur Textdateien, XMP-Beidateien und `Thumbs.db`
+liegen geblieben waren. Wer den Filter im Motor ändert, ändert ihn hier mit, sonst weichen
+Lageband und Vorschau voneinander ab.
+
+**Die Seite holt die Lage beim Zurückwechseln neu** (`visibilitychange`), nicht über einen
+Timer: Der Dienst bedient eine Anfrage nach der anderen, und ein Sekundentakt läge einem
+laufenden Import im Weg. Während eines Laufs ist der Vorschauknopf gesperrt; daran erkennt
+die Seite, dass sie gerade nichts abfragen soll.
+
+**Das Protokoll wird in der Seite gesetzt, nicht roh angezeigt.** `protokollAlsHtml` kennt
+die wenigen Zeilenarten der eigenen Protokolle: `#`/`##`, `- **Label:** Wert`, Tabellen und
+einzelne Sätze. Kein Markdown-Übersetzer von außen – die Seite lädt nichts nach. Eine Falle
+steckt darin: Kursiv mit Unterstrichen gibt es bewusst nicht, weil jeder Dateiname im
+Protokoll Unterstriche trägt (`20260910_101530_IMG.JPG`) und eine solche Regel mitten durch
+die Namen schnitte. Nur eine Zeile, die ganz in Unterstrichen steht, gilt als kursiv.
 
 **Die Ordner kommen bei jeder Anfrage frisch aus der Datei.** Der Dienst friert sie nicht
 beim Start ein, sonst würde eine Änderung über die Seite erst nach einem Neustart greifen.
