@@ -273,6 +273,12 @@
   button.zweit { background: var(--flaeche); color: var(--tinte); border: 1px solid var(--linie-st); font-weight: 500; }
   button.zweit:hover:not(:disabled) { border-color: var(--leise); }
   button.zweit:active:not(:disabled) { transform: translateY(1px); }
+  /* Knopf ohne Beschriftung: quadratisch, das Symbol traegt die Bedeutung.
+     Die Beschriftung steckt in title und aria-label. */
+  button.nursymbol { padding: 0; width: 32px; display: inline-flex; align-items: center; justify-content: center; }
+  button.nursymbol svg { width: 15px; height: 15px; display: block; }
+  button.nursymbol.laeuft svg { animation: dreht 0.8s linear infinite; }
+  @keyframes dreht { to { transform: rotate(360deg); } }
   button:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
   .laufstatus { font-size: 13px; color: var(--leise); }
   .laufstatus.laeuft::before {
@@ -427,6 +433,7 @@
         <div class="lagemeta" id="lagemeta"><span id="ortInbox">Inbox wird ermittelt …</span><span id="ortMediathek">Mediathek wird ermittelt …<span id="letzterLauf"></span></span></div>
       </div>
       <div class="lagetat">
+        <button class="zweit nursymbol" id="knopfAktualisieren" title="Zahlen neu holen" aria-label="Zahlen neu holen"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
         <button class="zweit" id="knopfVorschau">Vorschau</button>
         <button class="tat" id="knopfImport" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6 4l13 8-13 8z"/></svg><span id="knopfImportText">Wirklich ausführen</span></button>
         <span class="laufstatus" id="laufstatus"></span>
@@ -898,6 +905,24 @@ el("reorganisieren").addEventListener("change", function () {
 
 el("knopfVorschau").addEventListener("click", function () { starteLauf(true); });
 
+/* Zahlen auf Zuruf neu holen. Das automatische Auffrischen weiter unten greift
+   nur beim Wechsel zurueck ins Fenster; wer nebenher Dateien in die Inbox legt,
+   ohne das Fenster zu verlassen, hatte bisher nur F5 - und das wirft Vorschau
+   und Ergebnistabelle mit weg (R-20). */
+el("knopfAktualisieren").addEventListener("click", async function () {
+  var k = el("knopfAktualisieren");
+  if (k.disabled) return;
+  k.disabled = true;
+  k.classList.add("laeuft");
+  try {
+    await ladeLage();
+    await ladeLetzteLaeufe();
+  } finally {
+    k.classList.remove("laeuft");
+    k.disabled = false;
+  }
+});
+
 el("knopfImport").addEventListener("click", function () {
   if (!vorschauGesehen) return;
   var frage = el("reorganisieren").checked
@@ -911,6 +936,9 @@ async function starteLauf(vorschau) {
   var bereich = el("ergebnisBereich");
   el("knopfVorschau").disabled = true;
   el("knopfImport").disabled = true;
+  /* Auch der Aktualisieren-Knopf: Der Dienst bedient eine Anfrage nach der
+     anderen, ein Klick waehrend des Laufs wuerde nur warten. */
+  el("knopfAktualisieren").disabled = true;
   el("laufstatus").textContent = vorschau ? "Vorschau läuft …" : "Import läuft …";
   el("laufstatus").className = "laufstatus laeuft";
   bereich.innerHTML = "";
@@ -924,6 +952,7 @@ async function starteLauf(vorschau) {
     hinweis(bereich, "fehler", e.message);
   } finally {
     el("knopfVorschau").disabled = false;
+    el("knopfAktualisieren").disabled = false;
     el("laufstatus").textContent = "";
     el("laufstatus").className = "laufstatus";
     ladeLage();

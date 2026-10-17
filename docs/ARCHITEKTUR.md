@@ -365,6 +365,12 @@ Timer: Der Dienst bedient eine Anfrage nach der anderen, und ein Sekundentakt l�
 laufenden Import im Weg. Während eines Laufs ist der Vorschauknopf gesperrt; daran erkennt
 die Seite, dass sie gerade nichts abfragen soll.
 
+**Daneben steht ein Knopf, der dasselbe auf Zuruf tut** (`knopfAktualisieren`, links neben
+„Vorschau"). Der Wechsel ins Fenster deckt nur einen Teil der Fälle ab: Wer die Seite gar
+nicht verlässt und nebenher Dateien in die Inbox schiebt, hatte sonst nur F5 – und das wirft
+Vorschau und Ergebnistabelle mit weg (R-20). Der Knopf ist aus demselben Grund wie der
+Vorschauknopf während eines Laufs gesperrt und dreht sein Symbol, solange die Anfrage läuft.
+
 **Das Protokoll wird in der Seite gesetzt, nicht roh angezeigt.** `protokollAlsHtml` kennt
 die wenigen Zeilenarten der eigenen Protokolle: `#`/`##`, `- **Label:** Wert`, Tabellen und
 einzelne Sätze. Kein Markdown-Übersetzer von außen – die Seite lädt nichts nach. Eine Falle
@@ -450,11 +456,29 @@ Nicht-browserartige Clients bekommen die Datei direkt – Inno Setup gehört daz
 selbst war nie betroffen. Die Prüfung auf die ZIP-Kennung `PK` fängt den Fall trotzdem ab,
 damit nie die Prüfsumme einer Fehlerseite in ein Release wandert.
 
-**Geladen wird in `PrepareToInstall`, nicht auf einer eigenen Seite an `wpReady`.** Eine stille
-Installation (`/VERYSILENT`) durchläuft keine Assistentenseiten; dort entstünde sonst eine
-Installation ganz ohne ExifTool. Ein nicht leerer Rückgabewert dieser Funktion bricht sauber ab
-– geprüft mit einer falschen Prüfsumme: Exitcode 7, kein Zielordner. Die Prüfsumme prüft
-`DownloadTemporaryFile` selbst.
+**Geladen wird an zwei Stellen, und das hat einen Grund.** Der bediente Ablauf lädt auf einer
+eigenen Seite (`CreateDownloadPage`, angestoßen in `NextButtonClick` an `wpReady`), die stille
+Installation in `PrepareToInstall`. Nur `PrepareToInstall` läuft auch bei `/VERYSILENT`, das
+gar keine Assistentenseiten durchläuft – ohne diesen Zweig entstünde dort eine Installation
+ganz ohne ExifTool. Hat die Seite das Archiv schon geholt, steigt `PrepareToInstall` sofort
+wieder aus; `ArchivPfad` ist die Weiche.
+
+**Warum nicht allein `PrepareToInstall`?** Weil dort kein Fortschritt zu sehen ist. Während
+der Funktion ist `wpPreparing` (Seite 11) die sichtbare Seite, `WizardForm.ProgressGauge` und
+`WizardForm.StatusLabel` gehören aber zu `wpInstalling` (Seite 12). Dort gesetzter Fortschritt
+und dort geschriebener Text kommen beim Nutzer nicht an. Gemessen am 2026-10-17 mit einem
+Wegwerf-Setup, das `WizardForm.CurPageID` aus `PrepareToInstall` heraus protokolliert. Der
+Download ist mit rund 11 MB der längste Schritt der Installation; ohne sichtbare Regung sieht
+das Setup aus, als hänge es – so gemeldet im Betatest (R-19).
+
+Schlägt der Download auf der Seite fehl oder bricht ihn der Nutzer ab, geht es trotzdem
+weiter: Dann greift die Kette in `PrepareToInstall` mit ihren Rückfragen (noch einmal
+versuchen, vorhandene `exiftool.exe` wählen, vorhandene Installation weiterbenutzen). Zwei
+Fehlerbehandlungen nebeneinander wären eine zu viel.
+
+Ein nicht leerer Rückgabewert von `PrepareToInstall` bricht sauber ab – geprüft mit einer
+falschen Prüfsumme: Exitcode 7, kein Zielordner. Die Prüfsumme prüfen `DownloadTemporaryFile`
+und die Downloadseite selbst.
 
 **Die Arbeit steckt in PowerShell, nicht in Pascal.** `Entpacke-ExifTool.ps1` und
 `Schreibe-Einstellungen.ps1` laufen aus `{tmp}` (`Flags: dontcopy`) und sind einzeln auf der

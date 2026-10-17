@@ -110,12 +110,24 @@ Filename: "{app}\GoDigital-Medienimport_Anleitung-bebildert.pdf"; Description: "
 [Code]
 var
   OrdnerSeite: TInputDirWizardPage;
+  DownloadSeite: TDownloadWizardPage;
   ArchivPfad: String;
   VorhandenesExifTool: String;
   EinstellungenBehalten: Boolean;
 
 procedure InitializeWizard;
 begin
+  // Eigene Seite fuer den ExifTool-Download, mit eigenem Fortschrittsbalken.
+  // Grund: Waehrend PrepareToInstall ist wpPreparing (Seite 11) sichtbar,
+  // WizardForm.ProgressGauge und WizardForm.StatusLabel gehoeren aber zu
+  // wpInstalling (Seite 12). Dort geschriebener Text und dort gesetzter
+  // Fortschritt sind in dieser Zeit nicht zu sehen - gemessen am 2026-10-17.
+  // Der Download ist der laengste Schritt der Installation; ohne sichtbare
+  // Regung sieht das Setup aus, als haenge es (R-19).
+  DownloadSeite := CreateDownloadPage(
+    'ExifTool wird geladen',
+    'ExifTool liest das Aufnahmedatum aus Ihren Fotos und Videos. Es wird einmalig aus dem Netz geladen.',
+    nil);
   OrdnerSeite := CreateInputDirPage(wpSelectDir,
     'Ordner für Ihre Medien',
     'Wo sollen die Bilder liegen?',
@@ -231,11 +243,40 @@ begin
   Result := True;
 end;
 
+// Der bediente Ablauf laedt ExifTool auf der Ready-Seite, auf einer eigenen
+// Seite mit laufendem Balken, und nicht erst in PrepareToInstall. Schlaegt es
+// fehl, geht es trotzdem weiter: Dann greift die Kette in PrepareToInstall mit
+// ihren Rueckfragen (noch einmal versuchen, vorhandene exiftool.exe waehlen,
+// vorhandene Installation weiterbenutzen). Zwei Fehlerbehandlungen
+// nebeneinander waeren eine zu viel.
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
+
   if CurPageID = OrdnerSeite.ID then
+  begin
     Result := OrdnerSeiteGeprueft();
+    Exit;
+  end;
+
+  if (CurPageID = wpReady) and not WizardSilent then
+  begin
+    DownloadSeite.Clear;
+    DownloadSeite.Add('{#ExifToolUrl}', '{#ExifToolDatei}', '{#ExifToolHash}');
+    DownloadSeite.Show;
+    try
+      try
+        DownloadSeite.Download;
+        ArchivPfad := ExpandConstant('{tmp}\{#ExifToolDatei}');
+      except
+        // Nichts melden: PrepareToInstall fragt gleich selbst nach. Ein Abbruch
+        // durch den Nutzer gehoert ebenfalls hierher.
+        ArchivPfad := '';
+      end;
+    finally
+      DownloadSeite.Hide;
+    end;
+  end;
 end;
 
 function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo,
@@ -247,6 +288,11 @@ begin
             MemoTasksInfo;
 end;
 
+// Fortschritt fuer den Rueckfall in PrepareToInstall. Der bediente Ablauf zeigt
+// den Fortschritt auf der Downloadseite; hierher kommt nur noch die stille
+// Installation, die ohnehin nichts anzeigt, und der Fehlerfall. Der Text bleibt
+// trotzdem stehen: Er landet im Setup-Protokoll (/LOG) und hilft bei
+// Rueckfragen aus dem Betatest.
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
 begin
   if ProgressMax > 0 then
@@ -271,18 +317,25 @@ begin
   end;
 end;
 
-// Bewusst PrepareToInstall und keine eigene Downloadseite an wpReady: Dieser
-// Haken laeuft auch bei einer stillen Installation (/VERYSILENT), die gar keine
-// Assistentenseiten durchlaeuft. Sonst entstuende dort eine Installation ohne
-// ExifTool. Die Pruefsumme prueft DownloadTemporaryFile selbst; stimmt sie
-// nicht, wirft es eine Ausnahme und es wird nichts entpackt.
-// Ein nicht leerer Rueckgabewert bricht die Installation sauber ab, statt etwas
-// Halbfertiges zu hinterlassen.
+// Der Download steht hier zusaetzlich zur Downloadseite, nicht statt ihrer:
+// Dieser Haken laeuft auch bei einer stillen Installation (/VERYSILENT), die
+// gar keine Assistentenseiten durchlaeuft. Sonst entstuende dort eine
+// Installation ohne ExifTool. Hierher kommt also die stille Installation - und
+// der bediente Ablauf nur dann, wenn der Download auf der Seite fehlschlug;
+// dann greift die Kette aus Rueckfragen weiter unten.
+// Die Pruefsumme prueft DownloadTemporaryFile selbst; stimmt sie nicht, wirft
+// es eine Ausnahme und es wird nichts entpackt. Ein nicht leerer Rueckgabewert
+// bricht die Installation sauber ab, statt etwas Halbfertiges zu hinterlassen.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Fertig: Boolean;
 begin
   Result := '';
+  // Im bedienten Ablauf hat die Downloadseite das Archiv schon geholt. Dann
+  // ist hier nichts mehr zu tun; ein zweiter Download waere derselbe Griff
+  // ins Netz, nur ohne sichtbaren Fortschritt.
+  if ArchivPfad <> '' then
+    Exit;
   Fertig := False;
   repeat
     try
@@ -337,6 +390,11 @@ begin
   else
   begin
     ExifZiel := ExpandConstant('{app}\exiftool\exiftool.exe');
+    // Anders als in PrepareToInstall ist hier wpInstalling sichtbar, der Text
+    // kommt also auch an. Das Entpacken dauert nur Sekunden, aber es ist der
+    // letzte Schritt, bei dem das Fenster sonst stumm steht.
+    WizardForm.StatusLabel.Caption := 'ExifTool wird entpackt …';
+    WizardForm.Refresh();
     ExtractTemporaryFile('Entpacke-ExifTool.ps1');
     // Jeder Pfad in Anfuehrungszeichen: Zielordner und Archivpfad duerfen
     // Leerzeichen und Umlaute enthalten.

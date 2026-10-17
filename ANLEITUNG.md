@@ -47,10 +47,11 @@ Beide Ordner dürfen nicht derselbe sein, und keiner darf im anderen liegen: Son
 Programm die bereits einsortierten Bilder bei jedem Lauf noch einmal einlesen. Der Assistent
 sagt es, falls die Angaben nicht zusammenpassen.
 
-Während der Installation wird **ExifTool** aus dem Internet geladen, rund 11 MB. Das ist das
-Hilfsprogramm, das das Aufnahmedatum aus den Fotos liest; einmal Internet ist dafür nötig.
-Schlägt der Download fehl, bietet der Assistent an, es noch einmal zu versuchen oder eine
-schon vorhandene `exiftool.exe` auszuwählen.
+Nach dem Klick auf **Installieren** lädt der Assistent **ExifTool** aus dem Internet, rund
+11 MB, auf einer eigenen Seite mit Fortschrittsbalken. Das ist das Hilfsprogramm, das das
+Aufnahmedatum aus den Fotos liest; einmal Internet ist dafür nötig. Schlägt der Download
+fehl, bietet der Assistent an, es noch einmal zu versuchen oder eine schon vorhandene
+`exiftool.exe` auszuwählen.
 
 Am Ende legt das Setup eine Verknüpfung auf dem Desktop an, die die Weboberfläche startet.
 Im Startmenü liegt eine Gruppe mit allen Einträgen.
@@ -92,7 +93,9 @@ vollständigen Import steht dort entsprechend „4 Dateien in der Inbox, davon k
 importieren" statt einer Zahl, die nach unerledigter Arbeit aussieht.
 
 Wer die Seite offen lässt und nebenher Fotos in die Inbox kopiert, braucht nicht neu zu
-laden: Sobald das Fenster wieder nach vorn kommt, holt die Seite die Zahlen selbst.
+laden: Sobald das Fenster wieder nach vorn kommt, holt die Seite die Zahlen selbst. Wer das
+Fenster gar nicht verlässt, drückt den kleinen Knopf mit dem Kreispfeil links neben
+**Vorschau** – er holt die Zahlen auf Zuruf. Während ein Lauf läuft, ist er gesperrt.
 
 Rechts oben wechselt ein Knopf zwischen heller und dunkler Darstellung. Ohne Zutun folgt die
 Seite der Windows-Einstellung. Ganz unten stehen die drei letzten Läufe; ein Klick darauf

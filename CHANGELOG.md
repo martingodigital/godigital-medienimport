@@ -3,6 +3,19 @@
 Die Versionsnummer steht in `VERSION`; diese Datei sagt, was dahintersteckt.
 Ein Tag `v<Version>` löst den Bau des Setups aus.
 
+## 1.3.0 – 2026-10-17
+
+Zwei Rückmeldungen aus dem Betatest (R-19, R-20).
+
+- Beim Installieren bewegt sich der Fortschrittsbalken wieder. ExifTool wird jetzt auf
+  einer eigenen Seite des Assistenten geladen, die einen laufenden Balken mitbringt.
+  Bisher lief der Download in einem Abschnitt, in dem Balken und Statustext gar nicht
+  zu sehen sind — das Setup sah aus, als hänge es. Beim Entpacken sagt es nun ebenfalls,
+  was es tut. Die stille Installation (`/VERYSILENT`) lädt unverändert ohne Seite.
+- Die Weboberfläche hat einen Knopf zum Aktualisieren, links neben „Vorschau". Die Zahlen
+  kamen seit 1.2.0 nur von selbst, wenn das Fenster wieder nach vorn kam; wer es gar nicht
+  verließ, musste die ganze Seite neu laden und verlor dabei Vorschau und Ergebnistabelle.
+
 ## 1.2.0 – 2026-10-16
 
 Aus dem Betatest: sechs Stellen, an denen das Programm etwas anderes sagte, als es tat
