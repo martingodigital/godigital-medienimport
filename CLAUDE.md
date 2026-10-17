@@ -91,12 +91,22 @@ Mediathek, auch nicht sein `archiv\`.
 # Bestehende Mediathek umsortieren (idempotent, Ereignis-Zweig bleibt aussen vor):
 .\scripts\Importiere-Medien.ps1 -Reorganisieren -WhatIf
 
-# Isoliert testen, ohne die echte Mediathek anzufassen:
-.\scripts\Importiere-Medien.ps1 -Inbox <testInbox> -Mediathek <testZiel> -Protokolle <testLog> -WhatIf
+# Seltener gebraucht:
+.\scripts\Importiere-Medien.ps1 -ExifToolPath "C:\exiftool\exiftool.exe"
+.\scripts\Importiere-Medien.ps1 -EreignisOrdnerName "Anlaesse"
+.\scripts\Importiere-Medien.ps1 -DatumsFormat "%Y%m%d_%H%M%S"   # Falle, siehe unten
+
+# Isoliert testen, ohne die echte Mediathek und die echten Einstellungen anzufassen:
+.\scripts\Importiere-Medien.ps1 -Inbox <testInbox> -Mediathek <testZiel> `
+  -Protokolle <testLog> -EinstellungsDatei <testJson> -WhatIf
 
 # Weboberfläche starten (öffnet den Browser, Fenster muss offen bleiben):
 .\scripts\Starte-Weboberflaeche.ps1
 .\scripts\Starte-Weboberflaeche.ps1 -Port 9000 -OhneBrowser
+
+# Dienst isoliert testen (dieselben vier Ordnerangaben wie beim Motor):
+.\scripts\Starte-Weboberflaeche.ps1 -Port 9000 -OhneBrowser -Inbox <testInbox> `
+  -Mediathek <testZiel> -Protokolle <testLog> -EinstellungsDatei <testJson>
 
 # Setup bauen:
 .\installer\Baue-Setup.ps1 -OhneExifTool
@@ -106,7 +116,23 @@ Scheitert der `.ps1`-Aufruf an der Execution-Policy, hilft die `.cmd` (startet m
 `-ExecutionPolicy Bypass`) oder einmalig `Set-ExecutionPolicy -Scope CurrentUser
 RemoteSigned`.
 
-Rauchtest und Bedientest der Oberfläche stehen in
+Es gibt keine automatisierten Tests. Geprüft wird von Hand gegen Wegwerf-Ordner, und zwar
+mit `powershell.exe`, weil die `.cmd`-Starter Windows PowerShell 5.1 aufrufen:
+
+```powershell
+$t = "$env:TEMP\mt"; Remove-Item $t -Recurse -Force -ErrorAction SilentlyContinue
+mkdir "$t\inbox\2026-09_Test", "$t\ziel", "$t\log" | Out-Null
+"x" > "$t\inbox\IMG_0001.JPG"; "y" > "$t\inbox\2026-09_Test\IMG_0002.JPG"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Importiere-Medien.ps1 `
+  -Inbox "$t\inbox" -Mediathek "$t\ziel" -Protokolle "$t\log" `
+  -EinstellungsDatei "$t\einstellungen.json" -WhatIf
+```
+
+Die Testdateien brauchen kein EXIF: ExifTool listet auch eine 1-Byte-Datei mit Endung
+`.JPG`, das Skript greift dann auf das Dateisystemdatum zurück. Die Einstellungsdatei darf
+fehlen, dann gelten die eingebauten Werte – genau das ist der Zweck der Angabe.
+
+Bedientest der Oberfläche und Aufnahme des Screenshots stehen in
 [`docs\ARCHITEKTUR.md`](docs/ARCHITEKTUR.md#prüfen-und-testen).
 
 ## Architektur in Kürze
@@ -142,8 +168,9 @@ im genannten Abschnitt.
 
 - **Falsch gebaute Argumente fallen still auf die echten Ordner zurück.** Kommen `-Inbox`,
   `-Mediathek`, `-Protokolle` nicht an, läuft der Import gegen die Produktivmediathek. Genau
-  so entstand am 2026-09-23 ein ungewollter echter Lauf. Nach jedem Testlauf im
-  Protokollkopf nachsehen, welche Pfade benutzt wurden. (Weboberfläche)
+  so entstand am 2026-09-23 ein ungewollter echter Lauf. Nach jedem Testlauf nachsehen,
+  welche Pfade benutzt wurden – im Protokollkopf, bei `-WhatIf` in den `WhatIf:`-Zeilen.
+  (Weboberfläche)
 - **Eine neue Ausgabezeile kann die Weboberfläche fehlleiten.** `Read-SkriptAusgabe` prüft
   jede Zeile gegen feste Muster; eine Zeile mit „Verschieben nach" landet als Dateibewegung
   in der Vorschautabelle, eine mit „JSON-Fehler" als Abbruchgrund. (Ergebnisse, Fortschritt
@@ -170,10 +197,14 @@ im genannten Abschnitt.
 - Destruktive Aktionen immer vorher bestätigen lassen.
 - Nach jedem Verarbeitungslauf die Protokoll-Zusammenfassung nennen und auf die
   Protokolldatei verlinken.
-- Änderungen am Skript zuerst mit eigenen `-Inbox`/`-Mediathek`-Pfaden im Scratchpad prüfen,
-  nicht an der echten Mediathek. Es gibt keine automatisierten Tests.
-- Beim Testen mit eigenen Pfaden **immer alle drei** angeben (`-Inbox`, `-Mediathek`,
-  `-Protokolle`) und danach im Protokollkopf nachsehen, ob sie auch angekommen sind.
+- Änderungen am Skript zuerst mit eigenen Pfaden im Scratchpad prüfen, nicht an der echten
+  Mediathek. Der Rauchtest dafür steht oben unter „Befehle".
+- Beim Testen mit eigenen Pfaden **immer alle vier** angeben (`-Inbox`, `-Mediathek`,
+  `-Protokolle`, `-EinstellungsDatei`). Ohne die vierte Angabe zieht auch ein Testlauf die
+  echte `config\einstellungen.json` und damit deren Gruppierung, Filter und ExifTool-Pfad.
+- Danach nachsehen, ob die Pfade auch angekommen sind: bei einem echten Lauf im
+  Protokollkopf, bei `-WhatIf` in den `WhatIf:`-Zeilen – eine Vorschau schreibt kein
+  Protokoll, dort gibt es keinen Kopf zu prüfen.
 - **Immer auch unter Windows PowerShell 5.1 testen** (`powershell.exe`, nicht nur `pwsh`).
   Die `.cmd`-Starter rufen 5.1 auf, und es verhält sich bei `-WhatIf`, Encoding und
   .NET-Methoden anders als PowerShell 7.

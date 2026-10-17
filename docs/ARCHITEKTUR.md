@@ -550,14 +550,16 @@ $t = "$env:TEMP\mt"; Remove-Item $t -Recurse -Force -ErrorAction SilentlyContinu
 mkdir "$t\inbox\2026-09_Test", "$t\ziel", "$t\log" | Out-Null
 "x" > "$t\inbox\IMG_0001.JPG"; "y" > "$t\inbox\2026-09_Test\IMG_0002.JPG"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Importiere-Medien.ps1 `
-  -Inbox "$t\inbox" -Mediathek "$t\ziel" -Protokolle "$t\log" -WhatIf
+  -Inbox "$t\inbox" -Mediathek "$t\ziel" -Protokolle "$t\log" `
+  -EinstellungsDatei "$t\einstellungen.json" -WhatIf
 ```
 
 `powershell.exe` statt `pwsh` ist Absicht: die `.cmd`-Starter rufen 5.1 auf.
 
-Ohne `-EinstellungsDatei` zieht auch ein Rauchtest die echte `config\einstellungen.json`. Wer am
-Einstellungs-Code arbeitet, gibt den Pfad mit an und legt sich eine Testdatei an, sonst prüft er
-gegen die Produktivwerte.
+`-EinstellungsDatei` steht nicht zur Zierde dabei: Ohne sie zieht auch ein Rauchtest die echte
+`config\einstellungen.json` und damit deren Gruppierung, Filter und ExifTool-Pfad. Zeigt der Pfad
+ins Leere, gelten die eingebauten Werte; wer am Einstellungs-Code arbeitet, legt sich dort eine
+Testdatei an.
 
 **Die Oberfläche bedienen, ohne zu klicken.** Chrome headless mit `--remote-debugging-port` und
 einem eigenen `--user-data-dir` genügt. Über die WebSocket-Adresse aus
