@@ -46,13 +46,10 @@ Mediathek, auch nicht sein `archiv\`.
 | `scripts\Importiere-Medien.ps1` | Der Motor. Läuft eigenständig, kennt die Oberfläche nicht. |
 | `scripts\Starte-Weboberflaeche.ps1` | HTTP-Dienst auf 127.0.0.1, ruft den Motor als eigenen Prozess auf. |
 | `web\index.html` | Die Oberfläche. Wird vom Dienst ausgeliefert, lädt nichts von außen. |
-| `installer\` | Inno-Setup-Quelle, Bauskript, zwei Hilfsskripte für die Laufzeit, `liesmich.md`. |
 | `installer\GoDigital-Medienimport.svg` | Das Bildzeichen. Quelle des Icons, hier wird geändert. |
 | `installer\GoDigital-Medienimport.ico` | Daraus mit `Baue-Icon.ps1` gebaut, neun Größen. Eingecheckt, weil der Bau Chrome braucht. |
-| `installer\ausgabe\` | Die gebaute `Setup.exe`. Nicht im Repository, veröffentlicht wird sie als Release-Datei. |
 | `.github\workflows\release.yml` | Baut das Setup bei einem Tag `v*` und hängt es an ein GitHub-Release. |
 | `protokolle\` | Ein Markdown-Protokoll pro echtem Lauf. Reiner Laufzeitordner, nicht im Repository. |
-| `docs\ARCHITEKTUR.md` | Die Begründungen zu Motor, Oberfläche und Installer. Mitziehen, wenn sich Verhalten ändert. |
 | `docs\…_Anleitung-bebildert.pdf` | Bebilderte Anwenderanleitung; das Setup liefert sie mit. Quelle ist die `.html` daneben. |
 | `docs\DOKU-STIL.md` | Kopie der Skill `anwenderdoku-pdf` (Stand 2026-09-25). Maßgeblich bleibt die Skill-Datei. |
 | `docs\weboberflaeche.png` | Der Screenshot im README. Gegen Wegwerf-Ordner aufgenommen, nicht gegen die echte Mediathek. |
@@ -61,9 +58,7 @@ Mediathek, auch nicht sein `archiv\`.
 | `CHANGELOG.md` | Was sich je Fassung geändert hat. Die Nummer selbst steht nur in `VERSION`. |
 | `BETATEST.md` | Rückmeldungen aus dem Betatest, je Meldung nach Nutzen und Aufwand beurteilt. Nur lokal: nennt die Tester. |
 | `VERSION` | Eine Zeile, die Versionsnummer. Einzige Quelle; Protokollkopf und Setup lesen sie von hier. |
-| `README.md` | Einstieg auf GitHub: Downloadlink, Voraussetzungen, SmartScreen-Hinweis. |
 | `Medien importieren.cmd` | **Doppelklick-Start** (ohne Claude). Daneben `Vorschau (aendert nichts).cmd` und `Weboberflaeche starten.cmd`. |
-| `LICENSE` | MIT, Inhaber Martin Goßner. |
 
 ## Befehle
 
@@ -95,6 +90,7 @@ Mediathek, auch nicht sein `archiv\`.
 .\scripts\Importiere-Medien.ps1 -ExifToolPath "C:\exiftool\exiftool.exe"
 .\scripts\Importiere-Medien.ps1 -EreignisOrdnerName "Anlaesse"
 .\scripts\Importiere-Medien.ps1 -DatumsFormat "%Y%m%d_%H%M%S"   # Falle, siehe unten
+.\scripts\Importiere-Medien.ps1 -StatusDatei <datei.json>       # Fortschritt als JSON, setzt sonst der Dienst
 
 # Isoliert testen, ohne die echte Mediathek und die echten Einstellungen anzufassen:
 .\scripts\Importiere-Medien.ps1 -Inbox <testInbox> -Mediathek <testZiel> `
@@ -139,8 +135,10 @@ Bedientest der Oberfläche und Aufnahme des Screenshots stehen in
 
 Drei Teile, die einzeln laufen. Der **Motor** (`Importiere-Medien.ps1`) ist das Programm;
 er kennt weder Oberfläche noch Installer und muss per Doppelklick funktionsfähig bleiben.
-Der **Dienst** (`Starte-Weboberflaeche.ps1`) liefert die Seite aus und ruft den Motor als
-eigenen Prozess auf, weil dessen `exit 1` den Dienst sonst mitrisse. Das **Setup** baut
+Der **Dienst** (`Starte-Weboberflaeche.ps1`) liefert die Seite aus und startet den Motor als
+eigenen Prozess im Hintergrund, weil dessen `exit 1` den Dienst sonst mitrisse. Den
+Fortschritt liest er aus der `-StatusDatei` des Motors, das Ergebnis aus dessen Ausgabe; die
+Seite fragt beides über `/api/laufstatus` ab. Das **Setup** baut
 aus dem Projektordner eine `Setup.exe` und lädt ExifTool beim Installieren nach.
 
 Der Motor hat zwei Modi, die sich Protokoll- und Zusammenfassungs-Code teilen; die
@@ -173,10 +171,12 @@ im genannten Abschnitt.
   (Weboberfläche)
 - **Eine neue Ausgabezeile kann die Weboberfläche fehlleiten.** `Read-SkriptAusgabe` prüft
   jede Zeile gegen feste Muster; eine Zeile mit „Verschieben nach" landet als Dateibewegung
-  in der Vorschautabelle, eine mit „JSON-Fehler" als Abbruchgrund. (Ergebnisse, Fortschritt
+  in der Vorschau, eine mit „JSON-Fehler" als Abbruchgrund. (Ergebnisse, Fortschritt
   und Zeiten)
 - **`-WhatIf` zeigt keine `OK`-Zeilen.** Eine Vorschau meldet immer „Verschoben: 0"; was
-  verschoben würde, steht nur in den `WhatIf:`-Zeilen. (Gemeinsame Teile)
+  verschoben würde, steht nur in den `WhatIf:`-Zeilen. Umgekehrt wirkt `-WhatIf` nicht auf
+  Schreibzugriffe über `System.IO`: Wer so schreibt, prüft `$WhatIfPreference` selbst, sonst
+  schreibt auch die Vorschau. (Gemeinsame Teile)
 - **`-r` im ExifTool-Aufruf darf an keine Bedingung.** Ohne Rekursion bleiben Dateien aus
   Unterordnern unbemerkt in der Inbox liegen. (Modus Inbox)
 - **`-DatumsFormat` hängt an vier Stellen.** Ein anderes Format läuft fehlerfrei durch und
@@ -185,8 +185,6 @@ im genannten Abschnitt.
   (Einstellungen)
 - **`Get-Content` in einer JSON-Antwort lässt den Dienst hängen** – ohne Fehler, bis in den
   Timeout. Lesen über `[System.IO.File]::ReadAllText()`. (Weboberfläche)
-- **`confirm()` blockiert headless Chrome.** Ein Bedientest hängt dann ohne Meldung.
-  (Prüfen und Testen)
 
 ## Regeln für Claude in diesem Ordner
 

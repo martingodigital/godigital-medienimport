@@ -128,6 +128,8 @@
   tbody td:first-child { width: 32%; }
   tr { page-break-inside: avoid; }
   thead tr { page-break-after: avoid; }
+  /* Kurze Tabellen nicht trennen, sonst steht der Kopf mit einer Zeile allein am Seitenende. */
+  table.zusammen { page-break-inside: avoid; }
 
   /* --- Grafiken ----------------------------------------------------------- */
   figure {
@@ -164,7 +166,7 @@
 
 <h1>GoDigital Medienimport</h1>
 <p class="untertitel">Fotos und Videos ordnen – bebilderte Anleitung für die tägliche Nutzung</p>
-<p class="stand">Stand 16. Oktober 2026 · Diese Fassung richtet sich an Anwender. Die technische Fassung mit allen
+<p class="stand">Stand 16. November 2026 · Diese Fassung richtet sich an Anwender. Die technische Fassung mit allen
 Aufrufen steht in <code>ANLEITUNG.md</code> im Projektordner.</p>
 
 <!-- ====================================================================== 1 -->
@@ -473,74 +475,156 @@ liegt, landet gemeinsam unter <code>mediathek\Ereignisse\</code> – unter genau
 
 <p>Wer lieber in einem Fenster klickt, startet <code>Weboberflaeche starten.cmd</code>. Es öffnet sich eine Seite im
 Browser, auf der sich alles bedienen lässt. Dahinter läuft dasselbe Programm wie beim Doppelklick, nur eben mit
-Formular statt mit schwarzem Fenster.</p>
+Knöpfen und Bildern statt mit schwarzem Fenster. Oben steht in großer Schrift, was gerade ansteht, darunter führen
+drei Kästen durch die Schritte <em>Ablegen</em>, <em>Ansehen</em> und <em>Einsortieren</em>.</p>
 
 <figure>
-<svg viewBox="0 0 672 310" role="img" aria-label="Schematischer Aufbau der Weboberfläche">
-  <rect class="rahmen" x="8" y="8" width="656" height="280" rx="8"/>
+<svg viewBox="0 0 672 486" role="img" aria-label="Schematischer Aufbau der Weboberfläche">
+  <rect class="rahmen" x="8" y="8" width="656" height="470" rx="8"/>
 
-  <rect x="24" y="24" width="624" height="52" rx="4" fill="#f5f8fa" stroke="#dfe5e9"/>
-  <text x="44" y="50" class="k" font-size="18">128</text>
-  <text x="44" y="66" class="g" font-size="9.5">In der Inbox</text>
-  <text x="244" y="50" class="k" font-size="18">7</text>
-  <text x="244" y="66" class="g" font-size="9.5">Ereignisordner</text>
-  <text x="444" y="50" class="k" font-size="18">9 341</text>
-  <text x="444" y="66" class="g" font-size="9.5">In der Mediathek</text>
+  <!-- Kopf -->
+  <rect x="24" y="20" width="24" height="24" rx="6" fill="#14607a"/>
+  <rect x="30" y="27" width="12" height="10" rx="1.5" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="58" y="37" class="k" font-size="12">GoDigital Medienimport</text>
+  <rect class="rahmen" x="388" y="18" width="226" height="28" rx="14"/>
+  <rect x="392" y="21" width="58" height="22" rx="11" fill="#13364a"/>
+  <text x="421" y="36" font-size="10" text-anchor="middle" style="fill:#ffffff">Import</text>
+  <text x="490" y="36" font-size="10" text-anchor="middle">Protokolle</text>
+  <text x="567" y="36" font-size="10" text-anchor="middle">Einstellungen</text>
+  <circle class="rahmen" cx="636" cy="32" r="13"/>
+  <path d="M640 26a7 7 0 1 0 3 9a5.5 5.5 0 0 1-3-9z" fill="none" stroke="#5b6b76" stroke-width="1.2"/>
 
-  <rect x="24" y="88" width="104" height="26" rx="4" fill="#14607a"/>
-  <text x="76" y="105" font-size="10.5" text-anchor="middle" fill="#ffffff">Import</text>
-  <rect class="rahmen" x="136" y="88" width="132" height="26" rx="4"/>
-  <text x="202" y="105" font-size="10.5" text-anchor="middle">Einstellungen</text>
-  <rect class="rahmen" x="276" y="88" width="112" height="26" rx="4"/>
-  <text x="332" y="105" font-size="10.5" text-anchor="middle">Protokolle</text>
+  <!-- Held -->
+  <rect x="24" y="56" width="624" height="176" rx="10" fill="#ffffff" stroke="#c6ced4"/>
+  <text x="42" y="80" font-size="9.5" font-weight="700" style="fill:#14607a" letter-spacing="1">BEREIT ZUM EINSORTIEREN</text>
+  <text x="42" y="106" font-size="18" font-weight="700"><tspan fill="#14607a">128 neue Aufnahmen</tspan><tspan fill="#13364a"> warten auf dich</tspan></text>
+  <rect x="42" y="120" width="124" height="28" rx="6" fill="#14607a"/>
+  <text x="104" y="138" font-size="10.5" text-anchor="middle" style="fill:#ffffff" font-weight="600">Vorschau ansehen</text>
+  <rect x="174" y="120" width="130" height="28" rx="6" fill="#f2f5f7" stroke="#d8dee3"/>
+  <text x="239" y="138" font-size="10.5" text-anchor="middle" class="g">Jetzt einsortieren</text>
+  <rect class="rahmen" x="312" y="120" width="28" height="28" rx="6"/>
+  <path d="M331 128a6.5 6.5 0 1 0 2 5" fill="none" stroke="#5b6b76" stroke-width="1.5"/>
+  <path d="M328 125l4 3-4 3" fill="none" stroke="#5b6b76" stroke-width="1.5"/>
+  <rect class="rahmen" x="42" y="156" width="98" height="24" rx="6"/>
+  <text x="91" y="172" font-size="10" text-anchor="middle">Inbox öffnen</text>
+  <rect class="rahmen" x="148" y="156" width="120" height="24" rx="6"/>
+  <text x="208" y="172" font-size="10" text-anchor="middle">Mediathek öffnen</text>
+  <text x="42" y="200" font-size="9.5"><tspan font-weight="700" fill="#14607a">128</tspan><tspan class="g" fill="#5b6b76"> in der Inbox · </tspan><tspan font-weight="700">7</tspan><tspan fill="#5b6b76"> Ereignisordner · </tspan><tspan font-weight="700">9 341</tspan><tspan fill="#5b6b76"> in der Mediathek</tspan></text>
+  <text x="42" y="218" class="m g" font-size="9.5">Inbox: C:\Users\…\Bilder\Inbox</text>
 
-  <rect x="24" y="124" width="624" height="112" rx="4" fill="#ffffff" stroke="#dfe5e9"/>
-  <text x="36" y="143" class="g" font-size="9.5">Ereignisname</text>
-  <text x="240" y="143" class="g" font-size="9.5">Nur Dateien, die so anfangen</text>
-  <text x="448" y="143" class="g" font-size="9.5">Ordnerschema</text>
-  <rect class="rahmen" x="36" y="150" width="190" height="22" rx="3"/>
-  <rect class="rahmen" x="240" y="150" width="190" height="22" rx="3"/>
-  <rect class="rahmen" x="448" y="150" width="188" height="22" rx="3"/>
-  <text x="458" y="165" class="m" font-size="9.5">2026 \ 2026-09 \ Datei</text>
+  <!-- Buehne -->
+  <path d="M466 168 Q 528 70 594 168" class="pfeil" stroke-dasharray="4 4"/>
+  <g transform="rotate(-6 527 107)">
+    <rect x="504" y="88" width="46" height="38" rx="3" fill="#ffffff" stroke="#c6ced4"/>
+    <rect x="508" y="92" width="38" height="24" fill="#eaf1f6"/>
+    <path d="M508 116 l11-10 8 7 9-9 10 12z" fill="#9fbfcc"/>
+  </g>
+  <rect x="420" y="166" width="92" height="52" rx="8" fill="#f5f8fa" stroke="#c6ced4" stroke-dasharray="4 3"/>
+  <text x="466" y="208" font-size="10" text-anchor="middle" class="g">Inbox</text>
+  <rect x="548" y="166" width="92" height="52" rx="8" fill="#13364a"/>
+  <text x="594" y="208" font-size="10" text-anchor="middle" style="fill:#ffffff">Mediathek</text>
 
-  <rect class="rahmen" x="38" y="182" width="10" height="10" rx="2"/>
-  <text x="56" y="191" font-size="9.5">Unterordner der Inbox nach Datum einsortieren</text>
-  <rect class="rahmen" x="38" y="198" width="10" height="10" rx="2"/>
-  <text x="56" y="207" font-size="9.5">Endungsfilter abschalten</text>
-  <rect x="38" y="214" width="10" height="10" rx="2" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
-  <text x="56" y="223" font-size="9.5">Stattdessen die vorhandene Mediathek umsortieren</text>
+  <!-- Drei Schritte -->
+  <rect class="rahmen" x="24" y="244" width="200" height="40" rx="8"/>
+  <circle cx="44" cy="264" r="10" fill="#3f8f54"/>
+  <path d="M39 264l3.5 3.5 7-7" fill="none" stroke="#ffffff" stroke-width="2"/>
+  <text x="62" y="268" class="k" font-size="10.5">Ablegen</text>
+  <rect class="rahmen" x="236" y="244" width="200" height="40" rx="8"/>
+  <circle cx="256" cy="264" r="10" fill="#14607a"/>
+  <text x="256" y="268" font-size="10" text-anchor="middle" style="fill:#ffffff" font-weight="700">2</text>
+  <text x="274" y="268" class="k" font-size="10.5">Ansehen</text>
+  <rect class="rahmen" x="448" y="244" width="200" height="40" rx="8"/>
+  <circle cx="468" cy="264" r="10" fill="#eaf1f6" stroke="#14607a"/>
+  <text x="468" y="268" font-size="10" text-anchor="middle" style="fill:#14607a" font-weight="700">3</text>
+  <text x="486" y="268" class="k" font-size="10.5">Einsortieren</text>
 
-  <rect x="24" y="248" width="118" height="26" rx="4" fill="#ffffff" stroke="#14607a" stroke-width="1.5"/>
-  <text x="83" y="265" font-size="10.5" text-anchor="middle" fill="#14607a">Vorschau</text>
-  <rect x="156" y="248" width="152" height="26" rx="4" fill="#e9edf0" stroke="#dfe5e9"/>
-  <text x="232" y="265" font-size="10.5" text-anchor="middle" class="g">Wirklich ausführen</text>
-  <text x="320" y="265" class="g" font-size="9.5">erst nach der Vorschau anklickbar</text>
+  <!-- Optionen -->
+  <rect class="rahmen" x="24" y="294" width="624" height="28" rx="8"/>
+  <text x="40" y="312" class="k" font-size="10.5">Optionen für diesen Lauf</text>
+  <text x="196" y="312" class="g" font-size="9.5">Ereignisname, Namensfilter, Ordnerschema</text>
+  <text x="634" y="313" class="g" font-size="13" text-anchor="end">›</text>
 
-  <text x="8" y="302" class="g" font-size="9.5">Die Seite ist nur auf diesem Rechner erreichbar. Andere im Netzwerk kommen nicht heran.</text>
+  <!-- Vorschau als Bildkarten -->
+  <text x="24" y="348" class="k" font-size="13">September 2026</text>
+  <text x="138" y="348" class="g" font-size="9.5">14 Aufnahmen · kommen nach 2026\2026-09</text>
+
+  <rect class="rahmen" x="24" y="356" width="112" height="112" rx="6"/>
+  <rect x="30" y="362" width="100" height="56" rx="3" fill="#eaf1f6"/>
+  <path d="M30 418 l28-24 18 14 22-20 32 30z" fill="#9fbfcc"/>
+  <text x="30" y="432" class="m" font-size="9.5">20260910_101530_</text>
+  <text x="30" y="444" class="m" font-size="9.5">IMG_1001.JPG</text>
+  <text x="30" y="458" class="m g" font-size="9.5">vorher IMG_1001</text>
+
+  <rect class="rahmen" x="152" y="356" width="112" height="112" rx="6"/>
+  <rect x="158" y="362" width="100" height="56" rx="3" fill="#eaf1f6"/>
+  <path d="M158 418 l20-16 26 12 20-22 34 26z" fill="#b7cfd8"/>
+  <text x="158" y="432" class="m" font-size="9.5">20260910_103112_</text>
+  <text x="158" y="444" class="m" font-size="9.5">IMG_1002.JPG</text>
+  <text x="158" y="458" class="m g" font-size="9.5">vorher IMG_1002</text>
+
+  <rect class="rahmen" x="280" y="356" width="112" height="112" rx="6"/>
+  <rect x="286" y="362" width="100" height="56" rx="3" fill="#eaf1f6"/>
+  <rect x="318" y="380" width="24" height="18" rx="3" fill="none" stroke="#5b6b76" stroke-width="1.5"/>
+  <path d="M342 386l9-5v16l-9-5z" fill="none" stroke="#5b6b76" stroke-width="1.5"/>
+  <text x="286" y="432" class="m" font-size="9.5">20260911_084500_</text>
+  <text x="286" y="444" class="m" font-size="9.5">VID_0007.MP4</text>
+  <text x="286" y="458" class="m g" font-size="9.5">vorher VID_0007</text>
+
+  <rect class="rahmen" x="408" y="356" width="112" height="112" rx="6"/>
+  <rect x="414" y="362" width="100" height="56" rx="3" fill="#eaf1f6"/>
+  <path d="M414 418 l30-20 14 10 24-18 32 28z" fill="#9fbfcc"/>
+  <text x="414" y="432" class="m" font-size="9.5">20260915_120000_</text>
+  <text x="414" y="444" class="m" font-size="9.5">SCREEN_01.PNG</text>
+  <rect x="414" y="450" width="88" height="14" rx="7" fill="#fdf0dc"/>
+  <text x="458" y="461" font-size="9.5" text-anchor="middle" style="fill:#a35f12" font-weight="600">Datum geschätzt</text>
+
+  <text x="536" y="398" class="g" font-size="9.5">Neuer Name oben,</text>
+  <text x="536" y="412" class="g" font-size="9.5">alter Name darunter.</text>
+  <text x="536" y="434" class="g" font-size="9.5">Ohne Vorschaubild</text>
+  <text x="536" y="448" class="g" font-size="9.5">steht ein Symbol da.</text>
 </svg>
-<figcaption><b>Bild 6:</b> Schematischer Aufbau der Seite. Oben die aktuellen Zahlen, darunter die drei Reiter.</figcaption>
+<figcaption><b>Bild 6:</b> Schematischer Aufbau der Seite nach einer Vorschau. Oben die Lage mit den Knöpfen, darunter
+die drei Schritte, die Optionen für diesen Lauf und die Aufnahmen als Bildkarten, gruppiert nach dem Ordner, in den
+sie kommen.</figcaption>
 </figure>
 
 <table>
-<thead><tr><th>Reiter</th><th>Wofür er da ist</th></tr></thead>
+<thead><tr><th>Das sehen Sie</th><th>Das steckt dahinter</th></tr></thead>
 <tbody>
-<tr><td>Import</td><td>Angaben für einen einzelnen Durchgang: Ereignisname, Namensfilter, Ordnerschema und drei
-Haken. Erst auf <em>Vorschau</em> klicken, dann wird <em>Wirklich ausführen</em> freigegeben, und auch dann kommt
-noch eine Rückfrage.</td></tr>
-<tr><td>Einstellungen</td><td>Dieselben Werte, die sonst in der Einstellungsdatei stehen, nur als Formular: die drei
-Ordner, das Ordnerschema, die Liste der Dateitypen. Vor jedem Speichern wird eine Sicherung der bisherigen Werte
-angelegt.</td></tr>
-<tr><td>Protokolle</td><td>Die Berichte der letzten Durchgänge, direkt lesbar, ohne im Explorer zu suchen.</td></tr>
+<tr><td><em>Vorschau ansehen</em></td><td>Das Programm sieht nach, was passieren würde, und verschiebt nichts. Unten
+erscheinen Ihre Aufnahmen als Bildkarten mit neuem und altem Namen; kann Windows für eine Datei kein Vorschaubild
+erzeugen, steht ein gezeichnetes Symbol da. Was liegen bliebe, steht mit Grund in einer Tabelle darunter.</td></tr>
+<tr><td><em>Jetzt einsortieren</em></td><td>Erst nach einer Vorschau anklickbar. Danach fragt die Seite noch einmal
+nach und nennt die Zahl der Aufnahmen. Wer nach der Vorschau etwas an den Optionen ändert, braucht eine neue
+Vorschau.</td></tr>
+<tr><td>Ein Balken mit „Datei 12 von 480“</td><td>Der Durchgang läuft. Nach ein paar Sekunden steht dort auch, wie
+lange es ungefähr noch dauert. Am Ende heißt es „Fertig!“, und die Karten zeigen die Aufnahmen in der
+Mediathek.</td></tr>
+<tr><td>Die Marke <em>Datum geschätzt</em></td><td>Die Aufnahme hat kein Aufnahmedatum, etwa ein Screenshot oder ein
+Bild aus einem Messenger. Einsortiert wird nach dem Änderungsdatum der Datei. Die Vorschau ist der richtige Moment,
+das zu bemerken.</td></tr>
+<tr><td><em>Optionen für diesen Lauf</em></td><td>Angaben, die nur für den nächsten Durchgang gelten: Ereignisname,
+Namensfilter, Ordnerschema und drei Schalter. Ein Ereignisname mit einem Zeichen, das Windows in Ordnernamen nicht
+erlaubt, etwa einem Doppelpunkt, wird sofort rot gemeldet.</td></tr>
+<tr><td><em>Inbox öffnen</em>, <em>Mediathek öffnen</em></td><td>Öffnen den jeweiligen Ordner im Explorer. Der
+Knopf mit dem Kreispfeil zählt die Dateien neu, falls Sie nebenher etwas in die Inbox gelegt haben.</td></tr>
+<tr><td>Reiter <em>Protokolle</em></td><td>Die Berichte der letzten Durchgänge, direkt lesbar, ohne im Explorer zu
+suchen.</td></tr>
+<tr><td>Reiter <em>Einstellungen</em></td><td>Dieselben Werte, die sonst in der Einstellungsdatei stehen, nur als
+Formular: die drei Ordner, das Ordnerschema, die Liste der Dateitypen. Vor jedem Speichern wird eine Sicherung der
+bisherigen Werte angelegt.</td></tr>
 </tbody>
 </table>
 
 <div class="kasten gelb">
   <div class="kopf">Zwei Dinge, die man wissen sollte</div>
   <p>Das schwarze Fenster, das beim Start aufgeht, muss offen bleiben, solange Sie die Seite benutzen. Es ist das
-  Programm selbst. Zum Beenden schließen Sie das Fenster.</p>
-  <p>Der unterste Haken, <em>Stattdessen die vorhandene Mediathek umsortieren</em>, macht etwas anderes als die
-  beiden darüber: Er rührt die Inbox nicht an, sondern räumt die bereits einsortierten Dateien in ein anderes
-  Ordnerschema um und löscht dabei leer gewordene Ordner. Für den Alltag brauchen Sie ihn nicht.</p>
+  Programm selbst. Zum Beenden schließen Sie das Fenster. Die Browserseite dürfen Sie dagegen auch während eines
+  Durchgangs neu laden; sie zeigt den Fortschritt dann einfach weiter.</p>
+  <p>Der unterste Schalter unter <em>Optionen für diesen Lauf</em>, <em>Stattdessen die vorhandene Mediathek
+  umsortieren</em>, macht etwas anderes als die übrigen: Er rührt die Inbox nicht an, sondern räumt die bereits
+  einsortierten Dateien in ein anderes Ordnerschema um und löscht dabei leer gewordene Ordner. Für den Alltag
+  brauchen Sie ihn nicht.</p>
 </div>
 
 <!-- ====================================================================== 6 -->
@@ -651,7 +735,7 @@ Weboberfläche unter <em>Einstellungen</em> um. Die Auswirkung sehen Sie hier:</
 Darin stehen die verwendeten Einstellungen, eine Zusammenfassung und eine Zeile je Datei. Öffnen lässt sie sich mit
 jedem Texteditor, am bequemsten über den Reiter <em>Protokolle</em> in der Weboberfläche.</p>
 
-<table>
+<table class="zusammen">
 <thead><tr><th>Eintrag</th><th>Bedeutung</th></tr></thead>
 <tbody>
 <tr><td><code>OK</code></td><td>Die Datei wurde umbenannt und einsortiert.</td></tr>
@@ -665,6 +749,10 @@ Durchgang läuft trotzdem weiter.</td></tr>
 <p>In der Zusammenfassung zählt die Spalte „Übersprungen“ die Fehler mit. Nach einer Vorschau entsteht bewusst kein
 Bericht, weil nichts passiert ist.</p>
 
+<p>Der Bericht wird während des Durchgangs mitgeschrieben, nicht erst am Ende. Bricht ein Durchgang ab, etwa weil
+das schwarze Fenster geschlossen wurde, bleibt ein Bericht mit dem Vermerk „nicht abgeschlossen“ zurück. Darin steht,
+welche Dateien bis dahin einsortiert wurden.</p>
+
 <!-- ====================================================================== 9 -->
 <h2><span class="nr">10</span>Wenn etwas nicht klappt</h2>
 
@@ -676,6 +764,9 @@ Aufnahmedaten ausliest, liegt nicht am erwarteten Ort. Der Pfad lässt sich in d
 <em>Einstellungen</em> korrigieren.</td></tr>
 <tr><td>Die Seite im Browser lädt nicht mehr</td><td>Das schwarze Fenster wurde geschlossen. Einfach
 <code>Weboberflaeche starten.cmd</code> erneut starten; die Adresse ändert sich dabei.</td></tr>
+<tr><td>Das Feld Ereignisname ist rot, die Vorschau lässt sich nicht anklicken</td><td>Der Name enthält ein
+Zeichen, das Windows in Ordnernamen nicht erlaubt (<code>\ / : * ? " &lt; &gt; |</code>), oder er endet auf Punkt
+oder Leerzeichen. Den Namen ändern, dann geht es weiter.</td></tr>
 <tr><td>Eine Datei bleibt in der Inbox liegen</td><td>Entweder gehört ihr Dateityp nicht zur eingestellten Liste,
 oder sie ist als Dublette erkannt worden. Der Bericht nennt den Grund.</td></tr>
 <tr><td>Ein Screenshot hat ein unerwartetes Datum</td><td>Screenshots enthalten kein Aufnahmedatum. Verwendet wurde
@@ -710,8 +801,9 @@ vorher darauf hin. Am Ende stehen Dauer und Durchsatz auf dem Bildschirm und im 
 lassen</td></tr>
 <tr><td>Einen Urlaub zusammenhalten</td><td>Ordner in der Inbox anlegen, zum Beispiel
 <code>2026-09_Urlaub Italien</code>, und füllen</td></tr>
-<tr><td>Nur die Drohnenbilder importieren</td><td>Weboberfläche, Reiter Import, Feld „Nur Dateien, die so anfangen“:
-<code>DJI_</code></td></tr>
+<tr><td>Nur die Drohnenbilder importieren</td><td>Weboberfläche, <em>Optionen für diesen Lauf</em>, Feld „Nur
+Dateien, die so anfangen“: <code>DJI_</code></td></tr>
+<tr><td>Die Mediathek im Explorer ansehen</td><td>Weboberfläche, Knopf <em>Mediathek öffnen</em></td></tr>
 <tr><td>Die Mediathek auf eine andere Festplatte legen</td><td>Weboberfläche, Reiter Einstellungen, Feld
 Mediathek</td></tr>
 <tr><td>Nachsehen, was der letzte Durchgang getan hat</td><td>Weboberfläche, Reiter Protokolle – oder neueste Datei
@@ -741,7 +833,7 @@ werden.</td></tr>
   Bericht.</p>
 </div>
 
-<p class="fuss">GoDigital Medienimport · Bebilderte Anleitung · Stand 16. Oktober 2026 · Technische Fassung:
+<p class="fuss">GoDigital Medienimport · Bebilderte Anleitung · Stand 16. November 2026 · Technische Fassung:
 <code>ANLEITUNG.md</code> im Projektordner</p>
 
 </body>

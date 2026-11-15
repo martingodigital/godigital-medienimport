@@ -82,50 +82,83 @@ Wer lieber klickt als doppelklickt: **Weboberflaeche starten.cmd** öffnet eine 
 Browser, auf der sich alles bedienen lässt. Das schwarze Fenster, das dabei aufgeht, muss
 offen bleiben, solange die Seite benutzt wird. Zum Beenden das Fenster schließen.
 
-Ganz oben steht in einem Satz, was ansteht — etwa „2 Dateien warten in der Inbox" —, daneben
-die beiden Knöpfe **Vorschau** und **Wirklich ausführen**. Darunter drei Zahlen: Dateien in
-der Inbox, Ereignisordner und Dateien in der Mediathek; die Inbox-Kachel färbt sich, sobald
-dort etwas liegt. Fehlt ExifTool, erscheint darunter ein Hinweis darauf.
+Oben steht in großer Schrift, was ansteht, etwa „12 neue Aufnahmen warten auf dich" oder
+„Die Inbox ist leer". Darunter liegen die Knöpfe **Vorschau ansehen** und **Jetzt
+einsortieren**, ein kleiner Knopf mit Kreispfeil und die Knöpfe **Inbox öffnen** und
+**Mediathek öffnen**, die den jeweiligen Ordner im Explorer aufmachen. Der Knopf, der als
+Nächstes dran ist, ist farbig hervorgehoben. Unter den Knöpfen stehen drei Zahlen (Dateien in
+der Inbox, Ereignisordner, Dateien in der Mediathek) und die beiden Ordnerpfade. Rechts fliegen
+kleine Fotos von der Inbox in die Mediathek, solange etwas zu tun ist. Fehlt ExifTool, steht
+ganz oben ein Hinweis darauf.
 
-Liegt in der Inbox mehr, als der Import anfasst — Textdateien, XMP-Beidateien, `Thumbs.db` —,
-nennt die Kachel beide Zahlen („6 von 8 in der Inbox zu importieren"). Nach einem
-vollständigen Import steht dort entsprechend „4 Dateien in der Inbox, davon keine zu
-importieren" statt einer Zahl, die nach unerledigter Arbeit aussieht.
+Liegt in der Inbox mehr, als der Import anfasst (Textdateien, XMP-Beidateien, `Thumbs.db`),
+nennt die Zahlenzeile beide Zahlen („6 von 8 in der Inbox zu importieren"). Nach einem
+vollständigen Import heißt es dann „Nichts zu importieren" statt einer Zahl, die nach
+unerledigter Arbeit aussieht.
+
+Darunter zeigen drei Kästen, wo man steht: **Ablegen**, **Ansehen**, **Einsortieren**. Der
+aktuelle Schritt ist farbig, erledigte tragen einen Haken.
+
+Der Ablauf:
+
+1. **Vorschau ansehen** anklicken. Das Programm sieht nach, was passieren würde, und
+   verschiebt nichts. Unten erscheinen Bildkarten mit den eigenen Aufnahmen, gruppiert nach
+   dem Ordner, in den sie kommen, etwa „September 2026" oder „Ereignis: Urlaub Italien". Jede
+   Karte zeigt den neuen Namen und darunter den alten. Aufnahmen ohne Aufnahmedatum tragen die
+   Marke **Datum geschätzt**, und ein Hinweis darüber nennt ihre Zahl. Was liegen bleiben
+   würde, steht mit Grund in einer Tabelle darunter.
+2. **Jetzt einsortieren** anklicken. Der Knopf ist erst nach einer Vorschau anklickbar. Es
+   folgt eine Rückfrage in der Seite, die die Zahl der Aufnahmen nennt; erst mit **Jetzt
+   einsortieren** in dieser Rückfrage geht es los.
+3. Während des Laufs zeigt ein Balken, wie weit er ist: zuerst „Schritt 1 von 2: Aufnahmen
+   durchsehen", dann „Datei 12 von 480", die bewegte Datenmenge und, nach ein paar Sekunden,
+   die geschätzte Restzeit. Das schwarze Starterfenster muss bis zum Ende offen bleiben.
+4. Am Ende steht „Fertig! 480 Aufnahmen einsortiert", darunter die Karten mit den
+   Vorschaubildern aus der Mediathek und die Knöpfe **Mediathek öffnen** und **Protokoll
+   ansehen**. Die vollständige Liste aller Einträge steht zugeklappt ganz unten.
+
+Wer nach der Vorschau noch etwas an den Optionen ändert, braucht eine neue Vorschau.
+Einzelne Dateien lassen sich nicht abwählen: Der Lauf nimmt immer alles, was die Vorschau
+zeigt. Die Vorschaubilder liefert Windows, genau wie im Explorer. Für Dateien, zu denen
+Windows kein Bild erzeugen kann (je nach Rechner etwa HEIC oder RAW), steht ein gezeichnetes
+Foto- oder Videosymbol da.
+
+Wird die Seite während eines Laufs neu geladen, zeigt sie den Fortschritt einfach weiter. Der
+Lauf selbst hängt am schwarzen Starterfenster, nicht am Browser.
+
+Unter den drei Schritten liegt zugeklappt **Optionen für diesen Lauf**. Was dort steht, gilt
+nur für den nächsten Lauf und ändert nichts an den gespeicherten Einstellungen: Ereignisname,
+Namensfilter und Ordnerschema, dazu drei Schalter. Der erste sortiert die Unterordner der
+Inbox nach Datum ein, statt sie zu Ereignissen zu machen. Der zweite schaltet den
+Endungsfilter ab und zieht dann auch Textdateien und XMP-Beidateien mit in die Mediathek.
+Der dritte macht etwas ganz anderes: Er lässt die Inbox in Ruhe und sortiert stattdessen die
+vorhandene Mediathek um, genau wie `-Reorganisieren` in Abschnitt 8, einschließlich Löschen
+leerer Ordner. Ist er gesetzt, sind Ereignisname, Namensfilter und die beiden anderen
+Schalter gesperrt; das Ordnerschema bleibt wählbar, denn danach wird umsortiert. Die
+Rückfrage vor dem Start weist dann eigens auf die Löschung hin.
+
+Ein Ereignisname muss als Ordnername taugen. Enthält er eines der Zeichen `\ / : * ? " < > |`
+oder endet er auf Punkt oder Leerzeichen, meldet die Seite das schon beim Tippen, und die
+Vorschau bleibt gesperrt, bis der Name passt.
 
 Wer die Seite offen lässt und nebenher Fotos in die Inbox kopiert, braucht nicht neu zu
 laden: Sobald das Fenster wieder nach vorn kommt, holt die Seite die Zahlen selbst. Wer das
-Fenster gar nicht verlässt, drückt den kleinen Knopf mit dem Kreispfeil links neben
-**Vorschau** – er holt die Zahlen auf Zuruf. Während ein Lauf läuft, ist er gesperrt.
+Fenster gar nicht verlässt, drückt den Knopf mit dem Kreispfeil. Während ein Lauf läuft, ist
+er gesperrt.
 
-Rechts oben wechselt ein Knopf zwischen heller und dunkler Darstellung. Ohne Zutun folgt die
-Seite der Windows-Einstellung. Ganz unten stehen die drei letzten Läufe; ein Klick darauf
-öffnet das zugehörige Protokoll.
+Oben rechts liegen drei Reiter und ein Knopf, der zwischen heller und dunkler Darstellung
+wechselt. Ohne Zutun folgt die Seite der Windows-Einstellung.
 
-Die Seite hat drei Reiter:
-
-- **Import** sammelt die Angaben für einen einzelnen Lauf: Ereignisname, Namensfilter und
-  Ordnerschema, dazu drei Schalter. Der erste sortiert die Unterordner der Inbox nach Datum
-  ein, statt sie zu Ereignissen zu machen. Der zweite schaltet den Endungsfilter ab und
-  zieht dann auch Textdateien und XMP-Beidateien mit in die Mediathek. Der dritte macht
-  etwas ganz anderes als die beiden: Er lässt die Inbox in Ruhe und sortiert stattdessen
-  die vorhandene Mediathek um, genau wie `-Reorganisieren` in Abschnitt 8, inklusive
-  Löschen leerer Ordner. Ist er gesetzt, sind Ereignisname, Namensfilter und die beiden
-  anderen Schalter gesperrt; das Ordnerschema bleibt wählbar, denn danach wird umsortiert.
-  Die Rückfrage vor dem Start weist eigens auf die Löschung hin.
-
-  Ein Klick auf **Vorschau** zeigt in einer Tabelle, welche Datei wohin wandern würde.
-  Erst danach wird **Wirklich ausführen** anklickbar, und auch dann folgt noch eine
-  Rückfrage. Wer anschließend noch etwas am Formular ändert, braucht eine neue Vorschau.
-  Einzelne Dateien lassen sich nicht abwählen: Der Lauf nimmt immer alles aus der Tabelle.
-  Dateien, deren Datum nur aus dem Dateisystem stammt, sind mit **Datum geschätzt**
-  gekennzeichnet — in der Vorschau, also bevor etwas verschoben wird.
+- **Import** ist die Seite mit allem oben Beschriebenen.
+- **Protokolle** zeigt die letzten 50 Protokolle, ohne im Explorer zu suchen, gesetzt wie
+  Tabellen, nicht als Rohtext. **Protokollordner öffnen** zeigt die Dateien im Explorer.
 - **Einstellungen** bearbeitet dieselben Werte wie `config\einstellungen.json`, nur als
   Formular. Ganz oben stehen die drei Ordner: wo die Inbox liegt, wohin einsortiert wird und
   wohin die Protokolle kommen. Vor dem Speichern legt das Programm eine Sicherung als
-  `einstellungen.json.bak` daneben. Mindestens ein Dateityp muss angehakt bleiben.
-- **Protokolle** zeigt die letzten 50 Protokolle, ohne im Explorer zu suchen — gesetzt wie
-  die Tabellen im Reiter Import, nicht als Rohtext. Wer die Datei im Original braucht,
-  findet sie weiterhin im Protokollordner.
+  `einstellungen.json.bak` daneben. Mindestens ein Dateityp muss angehakt bleiben, und der
+  Name des Ereignis-Zweigs muss als Ordnername taugen.
+
+Ganz unten stehen die drei letzten Läufe; ein Klick darauf öffnet das zugehörige Protokoll.
 
 Die Seite läuft nur auf dem eigenen Rechner. Andere im Netzwerk erreichen sie nicht, und
 ohne die Adresse aus dem Starterfenster funktioniert sie auch im eigenen Browser nicht.
@@ -178,6 +211,11 @@ Dateinamen.
 
 Lose Dateien direkt in `inbox\` wandern weiterhin in die normalen Datumsordner. Beides
 lässt sich in einem Lauf mischen.
+
+Der Ordnername darf die Zeichen `\ / : * ? " < > |` nicht enthalten, Windows lässt sie in
+Ordnernamen nicht zu. Dasselbe gilt für den Ereignisnamen, der in der Weboberfläche oder mit
+`-Ereignis` angegeben wird; das Programm bricht dann mit einer Meldung ab, bevor es etwas
+anfasst.
 
 ---
 
@@ -367,6 +405,12 @@ verwendeten Einstellungen, eine Zusammenfassung und eine Tabelle mit einer Zeile
 Ein Fehler an einer einzelnen Datei bricht den Lauf nicht ab; die übrigen Dateien werden
 weiter verarbeitet. In der Zusammenfassung zählt die Spalte „Übersprungen" die Fehler mit.
 
+Das Protokoll entsteht nicht erst am Ende. Sobald das Einsortieren beginnt, legt das Programm
+die Datei an und schreibt jede verarbeitete Datei sofort hinein. Wird der Lauf unterbrochen,
+etwa weil jemand das Fenster schließt, bleibt ein Protokoll mit dem Vermerk „nicht
+abgeschlossen" zurück, in dem steht, was bis dahin geschah. Ein vollständiger Lauf ersetzt
+diesen Stand am Ende durch das fertige Protokoll.
+
 Bei einer Vorschau (`-WhatIf`) entsteht bewusst kein Protokoll. Sie endet deshalb mit
 einer eigenen Schlusszeile — „Vorschau beendet. 11 Dateien würden verschoben, 1 bliebe
 liegen." — und dem Hinweis, dass nichts verändert und kein Protokoll geschrieben wurde.
@@ -408,7 +452,8 @@ Am Ende jedes Laufs stehen die Zeiten auf dem Bildschirm, und dieselben Zahlen s
 oben im Protokoll: wie lange das Lesen der Aufnahmedaten gedauert hat, wie lange das
 Einsortieren, wie viele Daten dabei bewegt wurden und mit welchem Durchsatz. Wer den
 Eindruck hat, ein Import sei zu langsam, kann damit zeigen, woran es liegt. Während des
-Einsortierens zeigt das Fenster außerdem, bei welcher Datei der Lauf gerade ist.
+Einsortierens zeigt das Fenster außerdem, bei welcher Datei der Lauf gerade ist; die
+Weboberfläche zeigt dasselbe mit Balken und geschätzter Restzeit.
 
 Der ältere `E:\Drohne-Foto-Workflow` bleibt unverändert bestehen und hat seine eigene
 Mediathek. Beide Projekte arbeiten unabhängig voneinander.
@@ -426,5 +471,6 @@ Mediathek. Beide Projekte arbeiten unabhängig voneinander.
 | Einen Urlaub zusammenhalten | Ordner `inbox\2026-09_Urlaub Italien\` anlegen und füllen |
 | Nur Drohnenbilder | `.\scripts\Importiere-Medien.ps1 -Praefix "DJI_"` |
 | Anderes Ordnerschema | `.\scripts\Importiere-Medien.ps1 -Gruppierung Jahr` |
-| Mediathek umsortieren | Weboberfläche, Reiter Import, unterster Haken – oder `.\scripts\Importiere-Medien.ps1 -Reorganisieren -WhatIf` |
+| Mediathek umsortieren | Weboberfläche, „Optionen für diesen Lauf", unterster Schalter – oder `.\scripts\Importiere-Medien.ps1 -Reorganisieren -WhatIf` |
 | Nachsehen, was gelaufen ist | Neueste Datei in `protokolle\` öffnen |
+| Inbox oder Mediathek im Explorer öffnen | Weboberfläche, Knopf **Inbox öffnen** bzw. **Mediathek öffnen** |

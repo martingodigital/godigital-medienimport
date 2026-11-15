@@ -115,8 +115,8 @@ $Token = [guid]::NewGuid().ToString('N')
 
 # --- Antworten ---------------------------------------------------------------
 function Write-JsonAntwort {
-    param($Antwort, $Objekt, [int]$Status = 200)
-    $json  = $Objekt | ConvertTo-Json -Depth 4 -Compress
+    param($Antwort, $Objekt, [int]$Status = 200, [int]$Tiefe = 4)
+    $json  = $Objekt | ConvertTo-Json -Depth $Tiefe -Compress
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
     $Antwort.StatusCode      = $Status
     $Antwort.ContentType     = "application/json; charset=utf-8"
@@ -170,9 +170,74 @@ function Get-AktuellePfade {
     }
 }
 
-# --- Importskript als eigener Prozess ----------------------------------------
-function Invoke-Importskript {
-    param([object[]]$Argumente)
+# --- Vorschaubilder aus der Windows-Shell ------------------------------------
+# Dieselbe Quelle wie der Explorer: liefert Bilder fuer alles, wofuer Windows
+# einen Codec hat - JPG, PNG und Videos immer, HEIC und RAW je nach Rechner.
+# Gemessen unter 5.1: nach dem ersten Aufruf 15 bis 30 ms je Datei. Scheitert das
+# Uebersetzen (unter PowerShell 7 fehlt System.Drawing in dieser Form), gibt es
+# keine Vorschaubilder; die Seite zeigt dann Symbole, alles andere laeuft weiter.
+$VorschaubildBereit = $false
+try {
+    Add-Type -ReferencedAssemblies System.Drawing -ErrorAction Stop -TypeDefinition @'
+using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.InteropServices;
+
+public static class GoDigitalShellBild {
+    [ComImport, Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IShellItemImageFactory {
+        [PreserveSig] int GetImage(SIZE size, int flags, out IntPtr phbm);
+    }
+    [StructLayout(LayoutKind.Sequential)] struct SIZE { public int cx; public int cy; }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+    static extern void SHCreateItemFromParsingName(string path, IntPtr pbc, [MarshalAs(UnmanagedType.LPStruct)] Guid riid, [MarshalAs(UnmanagedType.Interface)] out IShellItemImageFactory ppv);
+    [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr h);
+
+    public static byte[] Jpeg(string pfad, int kante) {
+        IShellItemImageFactory f;
+        SHCreateItemFromParsingName(pfad, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out f);
+        IntPtr h;
+        SIZE s; s.cx = kante; s.cy = kante;
+        // 0x08 = nur ein echtes Vorschaubild, nie das Symbol des Dateityps
+        int hr = f.GetImage(s, 0x08, out h);
+        Marshal.ReleaseComObject(f);
+        if (hr != 0) return null;
+        try {
+            using (Bitmap b = Image.FromHbitmap(h))
+            using (MemoryStream m = new MemoryStream()) {
+                b.Save(m, ImageFormat.Jpeg);
+                return m.ToArray();
+            }
+        } finally { DeleteObject(h); }
+    }
+}
+'@
+    $VorschaubildBereit = $true
+} catch {
+    Write-Host "Hinweis: Vorschaubilder stehen nicht zur Verfügung ($($_.Exception.Message.Split("`n")[0]))." -ForegroundColor Yellow
+}
+
+# --- Importskript als eigener Prozess, im Hintergrund ------------------------
+# Der Dienst bedient eine Anfrage nach der anderen. Wuerde er auf das Ende des
+# Laufs warten, koennte die Seite waehrenddessen nicht einmal nach dem Stand
+# fragen - genau das war bis 1.3.0 so ("Import laeuft ...", sonst nichts). Der
+# Lauf wird deshalb nur gestartet; sein Stand kommt aus der Statusdatei des
+# Motors, sein Ergebnis holt Get-Laufstand ab, sobald der Prozess beendet ist.
+$script:Lauf = $null
+
+function Test-LaufAktiv {
+    return ($null -ne $script:Lauf -and $null -eq $script:Lauf.Ergebnis)
+}
+
+function Start-Importlauf {
+    param([object[]]$Argumente, [string]$Art, $Pfade)
+
+    $statusDatei = Join-Path ([System.IO.Path]::GetTempPath()) "godigital-medienimport-status-$Token.json"
+    try { [System.IO.File]::Delete($statusDatei) } catch { }
+    $Argumente = @($Argumente) + (New-Arg "-StatusDatei" $statusDatei)
 
     # Parametername und Wert MUESSEN getrennt behandelt werden: ein Name in
     # Anfuehrungszeichen ist fuer PowerShell kein Parameter, sondern ein Wert.
@@ -201,17 +266,96 @@ function Invoke-Importskript {
     $psi.WorkingDirectory       = $Root
 
     $p = [System.Diagnostics.Process]::Start($psi)
-    # stderr MUSS nebenher gelesen werden. Liest man erst stdout zu Ende und
-    # danach stderr, blockiert der Kindprozess, sobald sein stderr-Puffer voll
-    # ist, und ReadToEnd kehrt nie zurueck.
-    $errAufgabe = $p.StandardError.ReadToEndAsync()
-    $aus = $p.StandardOutput.ReadToEnd()
-    $p.WaitForExit()
-    $err  = $errAufgabe.Result
-    $code = $p.ExitCode
-    $p.Dispose()
+    # Beide Stroeme MUESSEN nebenher gelesen werden. Bleibt einer ungelesen,
+    # blockiert der Kindprozess, sobald dessen Puffer voll ist.
+    $script:Lauf = [pscustomobject]@{
+        Prozess     = $p
+        Aus         = $p.StandardOutput.ReadToEndAsync()
+        Err         = $p.StandardError.ReadToEndAsync()
+        Art         = $Art
+        Pfade       = $Pfade
+        StatusDatei = $statusDatei
+        Beginn      = Get-Date
+        Fortschritt = $null
+        Ergebnis    = $null
+    }
+}
 
-    return [pscustomobject]@{ Code = $code; Ausgabe = $aus; Fehler = $err }
+function Get-Laufstand {
+    $l = $script:Lauf
+    if (-not $l) {
+        return [pscustomobject]@{ laeuft = $false; art = ""; sekunden = 0; fortschritt = $null; ergebnis = $null }
+    }
+    if (-not $l.Ergebnis) {
+        # Der Motor schreibt die Datei, waehrend hier gelesen wird. Ein halber
+        # Stand ist kein Fehler: Dann gilt der letzte lesbare weiter.
+        try {
+            if ([System.IO.File]::Exists($l.StatusDatei)) {
+                $l.Fortschritt = ([System.IO.File]::ReadAllText($l.StatusDatei) | ConvertFrom-Json)
+            }
+        } catch { }
+
+        if ($l.Prozess.HasExited) {
+            $l.Prozess.WaitForExit()
+            $ausgabe = $l.Aus.Result
+            [void]$l.Err.Result
+            $code = $l.Prozess.ExitCode
+            $l.Prozess.Dispose()
+            try { [System.IO.File]::Delete($l.StatusDatei) } catch { }
+
+            $aus = Read-SkriptAusgabe -Ausgabe $ausgabe -MediathekPfad $l.Pfade.Mediathek -InboxPfad $l.Pfade.Inbox
+            if ($l.Art -eq 'vorschau') {
+                $l.Ergebnis = [pscustomobject]@{
+                    ok        = ($code -eq 0)
+                    exitCode  = $code
+                    aktionen  = $aus.aktionen
+                    meldungen = $aus.meldungen
+                }
+            } else {
+                $name = ""
+                if ($aus.protokoll) { $name = [System.IO.Path]::GetFileName($aus.protokoll) }
+                $l.Ergebnis = [pscustomobject]@{
+                    ok            = ($code -eq 0)
+                    exitCode      = $code
+                    meldungen     = $aus.meldungen
+                    verschoben    = $aus.verschoben
+                    uebersprungen = $aus.uebersprungen
+                    protokollName = $name
+                }
+            }
+        }
+    }
+    return [pscustomobject]@{
+        laeuft      = ($null -eq $l.Ergebnis)
+        art         = $l.Art
+        sekunden    = [int]((Get-Date) - $l.Beginn).TotalSeconds
+        fortschritt = $l.Fortschritt
+        ergebnis    = $l.Ergebnis
+    }
+}
+
+# Der Pfad einer Datei relativ zu Inbox oder Mediathek. Die Seite fordert damit
+# das Vorschaubild an; einen vollen Pfad gibt sie nie zurueck.
+function Get-RelativZurWurzel {
+    param([string]$Pfad, [string]$InboxPfad, [string]$MediathekPfad)
+    foreach ($paar in @(@('inbox', $InboxPfad), @('mediathek', $MediathekPfad))) {
+        if (-not $paar[1]) { continue }
+        $w = $paar[1].TrimEnd('\') + '\'
+        if ($Pfad.StartsWith($w, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return [pscustomobject]@{ wurzel = $paar[0]; pfad = $Pfad.Substring($w.Length) }
+        }
+    }
+    return [pscustomobject]@{ wurzel = ""; pfad = "" }
+}
+
+# Dieselbe Regel wie im Importskript (Test-OrdnernameErlaubt). Bewusst kopiert,
+# die beiden Skripte bleiben voneinander unabhaengig.
+function Test-OrdnernameErlaubt {
+    param([string]$Name)
+    if ($Name -match '[\\/:*?"<>|]') { return $false }
+    if ($Name -match '[. ]$')        { return $false }
+    if ($Name -match '^(CON|PRN|AUX|NUL|COM\d|LPT\d)$') { return $false }
+    return $true
 }
 
 # --- Ausgabe des Importskripts auswerten -------------------------------------
@@ -223,7 +367,7 @@ function Invoke-Importskript {
 #   - aus ihr werden die Windows-Pfade gezogen: erster = Ziel, zweiter = Quelle.
 # Die WhatIf-Zeile des unterdrueckten Set-Content faellt damit von selbst weg.
 function Read-SkriptAusgabe {
-    param([string]$Ausgabe, [string]$MediathekPfad)
+    param([string]$Ausgabe, [string]$MediathekPfad, [string]$InboxPfad)
 
     $aktionen  = New-Object System.Collections.Generic.List[object]
     $meldungen = New-Object System.Collections.Generic.List[object]
@@ -246,8 +390,12 @@ function Read-SkriptAusgabe {
                 if ($MediathekPfad -and $ziel.StartsWith($MediathekPfad, [System.StringComparison]::OrdinalIgnoreCase)) {
                     $relativ = $ziel.Substring($MediathekPfad.Length).TrimStart('\')
                 }
+                $herkunft = Get-RelativZurWurzel -Pfad $quelle -InboxPfad $InboxPfad -MediathekPfad $MediathekPfad
                 $aktionen.Add([pscustomobject]@{
                     quelleName = [System.IO.Path]::GetFileName($quelle)
+                    # Fuer das Vorschaubild: wo die Datei JETZT liegt.
+                    wurzel     = $herkunft.wurzel
+                    quelle     = $herkunft.pfad
                     zielOrdner = [System.IO.Path]::GetDirectoryName($relativ)
                     zielName   = [System.IO.Path]::GetFileName($ziel)
                     # Der Motor haengt diesen Zusatz an den ShouldProcess-Text,
@@ -417,6 +565,9 @@ function Set-EinstellungenObjekt {
         VideoZeitAlsOrtszeit     = [bool]$Eingang.VideoZeitAlsOrtszeit
     }
     if (-not $neu.EreignisOrdnerName) { $neu.EreignisOrdnerName = "Ereignisse" }
+    if (-not (Test-OrdnernameErlaubt $neu.EreignisOrdnerName)) {
+        throw "Der Name des Ereignis-Zweigs taugt nicht als Ordnername. Nicht erlaubt sind die Zeichen \ / : * ? `" < > | sowie ein Punkt oder Leerzeichen am Ende."
+    }
 
     # ConvertTo-Json maskiert unter PowerShell 5.1 Umlaute als \uXXXX. Gueltiges
     # JSON, aber die Datei soll von Hand lesbar bleiben, deshalb zurueckwandeln.
@@ -665,32 +816,82 @@ try {
                     }
                 }
 
-                "/api/vorschau" {
-                    $pfade = Get-AktuellePfade -Konfig (Get-KonfigRoh).Konfig
-                    $lauf  = Invoke-Importskript -Argumente (Get-LaufArgumente -Anfrage $koerper -Pfade $pfade -Vorschau)
-                    $aus   = Read-SkriptAusgabe -Ausgabe $lauf.Ausgabe -MediathekPfad $pfade.Mediathek
-                    Write-JsonAntwort $antwort ([pscustomobject]@{
-                        ok        = ($lauf.Code -eq 0)
-                        exitCode  = $lauf.Code
-                        aktionen  = $aus.aktionen
-                        meldungen = $aus.meldungen
-                    })
+                { $_ -in "/api/vorschau", "/api/import" } {
+                    # Beide starten nur. Stand und Ergebnis holt die Seite ueber
+                    # /api/laufstatus ab.
+                    if ($anfrage.HttpMethod -ne "POST") {
+                        Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $false; fehler = "Dieser Aufruf braucht POST." }) 405
+                    } elseif (Test-LaufAktiv) {
+                        Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $false; fehler = "Es läuft bereits ein Lauf. Bitte warten, bis er fertig ist." }) 409
+                    } else {
+                        $pfade = Get-AktuellePfade -Konfig (Get-KonfigRoh).Konfig
+                        if ($pfad -eq "/api/vorschau") {
+                            Start-Importlauf -Art 'vorschau' -Pfade $pfade -Argumente (Get-LaufArgumente -Anfrage $koerper -Pfade $pfade -Vorschau)
+                        } else {
+                            Start-Importlauf -Art 'import' -Pfade $pfade -Argumente (Get-LaufArgumente -Anfrage $koerper -Pfade $pfade)
+                        }
+                        Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $true; gestartet = $true })
+                    }
                 }
 
-                "/api/import" {
+                "/api/laufstatus" {
+                    Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $true; lauf = (Get-Laufstand) }) 200 7
+                }
+
+                "/api/vorschaubild" {
+                    # Nur Dateien innerhalb von Inbox oder Mediathek, und nur als
+                    # verkleinertes Bild: Der Aufruf gibt nie eine Datei im
+                    # Original heraus.
+                    $pfade  = Get-AktuellePfade -Konfig (Get-KonfigRoh).Konfig
+                    $wurzel = switch ($anfrage.QueryString["wurzel"]) {
+                        "inbox"     { $pfade.Inbox }
+                        "mediathek" { $pfade.Mediathek }
+                        default     { "" }
+                    }
+                    $rel = $anfrage.QueryString["pfad"]
+                    $voll = ""
+                    if ($wurzel -and $rel) {
+                        try { $voll = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($wurzel, $rel)) } catch { $voll = "" }
+                    }
+                    if (-not $voll -or -not (Test-LiegtInnerhalb -Unten $voll -Oben ([System.IO.Path]::GetFullPath($wurzel)))) {
+                        Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $false; fehler = "Ungültiger Pfad." }) 400
+                    } else {
+                        $bild = $null
+                        if ($VorschaubildBereit -and [System.IO.File]::Exists($voll)) {
+                            try { $bild = [GoDigitalShellBild]::Jpeg($voll, 320) } catch { $bild = $null }
+                        }
+                        if ($bild) {
+                            $antwort.StatusCode      = 200
+                            $antwort.ContentType     = "image/jpeg"
+                            $antwort.Headers["Cache-Control"] = "private, max-age=300"
+                            $antwort.ContentLength64 = $bild.Length
+                            $antwort.OutputStream.Write($bild, 0, $bild.Length)
+                        } else {
+                            Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $false; fehler = "Kein Vorschaubild." }) 404
+                        }
+                    }
+                }
+
+                "/api/oeffne" {
+                    # Nur die drei bekannten Ordner, nie ein Pfad aus der Anfrage.
                     $pfade = Get-AktuellePfade -Konfig (Get-KonfigRoh).Konfig
-                    $lauf  = Invoke-Importskript -Argumente (Get-LaufArgumente -Anfrage $koerper -Pfade $pfade)
-                    $aus   = Read-SkriptAusgabe -Ausgabe $lauf.Ausgabe -MediathekPfad $pfade.Mediathek
-                    $name  = ""
-                    if ($aus.protokoll) { $name = [System.IO.Path]::GetFileName($aus.protokoll) }
-                    Write-JsonAntwort $antwort ([pscustomobject]@{
-                        ok            = ($lauf.Code -eq 0)
-                        exitCode      = $lauf.Code
-                        meldungen     = $aus.meldungen
-                        verschoben    = $aus.verschoben
-                        uebersprungen = $aus.uebersprungen
-                        protokollName = $name
-                    })
+                    $ziel = ""
+                    if ($koerper) {
+                        $ziel = switch ([string]$koerper.ordner) {
+                            "inbox"      { $pfade.Inbox }
+                            "mediathek"  { $pfade.Mediathek }
+                            "protokolle" { $pfade.Protokolle }
+                            default      { "" }
+                        }
+                    }
+                    if ($anfrage.HttpMethod -ne "POST" -or -not $ziel) {
+                        Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $false; fehler = "Unbekannter Ordner." }) 400
+                    } elseif (-not (Test-Path -LiteralPath $ziel -PathType Container)) {
+                        Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $false; fehler = "Den Ordner gibt es noch nicht: $ziel" }) 404
+                    } else {
+                        Start-Process explorer.exe -ArgumentList ('"' + $ziel + '"')
+                        Write-JsonAntwort $antwort ([pscustomobject]@{ ok = $true })
+                    }
                 }
 
                 "/api/protokolle" {

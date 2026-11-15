@@ -54,6 +54,8 @@
 .PARAMETER OhneUnterordner    Unterordner der Inbox nicht als Ereignis behandeln.
 .PARAMETER EinstellungsDatei  Standard: <Root>\config\einstellungen.json
 .PARAMETER DatumsFormat       ExifTool-Datumsformat, Standard "%Y%m%d_%H%M%S".
+.PARAMETER StatusDatei        Optional. Dorthin schreibt der Lauf seinen Stand als JSON;
+                              die Weboberfläche liest daraus den Fortschritt.
 
 .EXAMPLE
     .\Importiere-Medien.ps1 -WhatIf
@@ -80,7 +82,8 @@ param(
     [string]$EreignisOrdnerName = "Ereignisse",
     [switch]$OhneUnterordner,
     [string]$EinstellungsDatei,
-    [string]$DatumsFormat = "%Y%m%d_%H%M%S"
+    [string]$DatumsFormat = "%Y%m%d_%H%M%S",
+    [string]$StatusDatei
 )
 
 # --- Pfade relativ zum Skript ------------------------------------------------
@@ -241,6 +244,97 @@ if ($Reorganisieren -and $Ereignis) {
     exit 1
 }
 
+# --- Sperre: Ereignisname muss als Ordnername taugen -------------------------
+# Aus dem Betatest (R-14): "Urlaub: Italien" endete in einer rohen
+# DriveNotFoundException aus Join-Path. Die Meldung steht bewusst in EINER Zeile
+# und beginnt mit "FEHLER:" - so zeigt die Weboberflaeche sie als Abbruchgrund.
+function Test-OrdnernameErlaubt {
+    param([string]$Name)
+    if ($Name -match '[\\/:*?"<>|]') { return $false }
+    if ($Name -match '[. ]$')        { return $false }
+    if ($Name -match '^(CON|PRN|AUX|NUL|COM\d|LPT\d)$') { return $false }
+    return $true
+}
+foreach ($paar in @(@('Ereignisname', $Ereignis), @('Name des Ereignis-Zweigs', $EreignisOrdnerName))) {
+    if ($paar[1] -and -not (Test-OrdnernameErlaubt $paar[1])) {
+        Write-Host ("FEHLER: Der $($paar[0]) '$($paar[1])' taugt nicht als Ordnername. Nicht erlaubt sind die Zeichen \ / : * ? `" < > | sowie ein Punkt oder Leerzeichen am Ende.") -ForegroundColor Red
+        exit 1
+    }
+}
+
+# --- Hilfsfunktion: Stand des Laufs in eine Datei schreiben ------------------
+# Nur mit -StatusDatei. Die Weboberflaeche liest daraus den Fortschritt, weil
+# Write-Progress sie nicht erreicht und jede neue Zeile auf stdout ihre Auswertung
+# stoeren koennte. Bewusst ueber System.IO: so entsteht die Datei auch bei -WhatIf
+# (sie ist kein Ergebnis des Laufs) und ohne Provider-Meldungen. Ein Schreibfehler
+# darf den Lauf nie stoppen.
+$script:letzterStatus = [System.Diagnostics.Stopwatch]::StartNew()
+function Write-Laufstatus {
+    param(
+        [string]$Phase,
+        [int]$Nummer = 0,
+        [int]$Gesamt = 0,
+        [long]$Bytes = 0,
+        [long]$GesamtBytes = 0,
+        [string]$Datei = "",
+        [switch]$Erzwingen
+    )
+    if (-not $StatusDatei) { return }
+    if (-not $Erzwingen -and $script:letzterStatus.ElapsedMilliseconds -lt 500) { return }
+    $script:letzterStatus.Restart()
+    try {
+        $json = [pscustomobject]@{
+            phase = $Phase; nummer = $Nummer; gesamt = $Gesamt
+            bytes = $Bytes; gesamtBytes = $GesamtBytes; datei = $Datei
+        } | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText($StatusDatei, $json, (New-Object System.Text.UTF8Encoding $false))
+    } catch { }
+}
+
+# --- Hilfsfunktionen: Protokoll mitschreiben ---------------------------------
+# Aus dem Betatest (R-04): Wurde das Fenster waehrend des Laufs geschlossen, gab es
+# kein Protokoll - ausgerechnet dann, wenn man es am dringendsten braucht. Deshalb
+# entsteht die Datei schon nach Schritt 1 mit einem Kopf, und jedes Ergebnis wird
+# angehaengt. Am Ende ueberschreibt das vollstaendige Protokoll diese Fassung.
+# Bei -WhatIf entsteht nichts: Die Funktionen schreiben ueber System.IO und muessen
+# die Vorschau deshalb selbst ausschliessen.
+$protokollStempel = $start.ToString("yyyyMMdd_HHmmss")
+$script:teilprotokollAktiv   = $false
+$script:teilprotokollZeilen  = 0
+function Start-Teilprotokoll {
+    param([string]$Datei, [string]$Titel, [string[]]$Kopfzeilen)
+    if ($WhatIfPreference) { return }
+    try {
+        $t = New-Object System.Text.StringBuilder
+        [void]$t.AppendLine("# Protokoll - $Titel (nicht abgeschlossen)")
+        [void]$t.AppendLine("")
+        foreach ($k in $Kopfzeilen) { [void]$t.AppendLine($k) }
+        [void]$t.AppendLine("")
+        [void]$t.AppendLine("Dieser Lauf wurde nicht abgeschlossen. Unten steht, was bis zum Abbruch geschah.")
+        [void]$t.AppendLine("")
+        [void]$t.AppendLine("## Details")
+        [void]$t.AppendLine("| Status | Datei (alt) | Ziel (relativ zur Mediathek) | Grund |")
+        [void]$t.AppendLine("|--------|-------------|------------------------------|-------|")
+        [System.IO.File]::WriteAllText($Datei, $t.ToString(), (New-Object System.Text.UTF8Encoding $true))
+        $script:teilprotokollAktiv = $true
+    } catch { }
+}
+function Write-TeilprotokollNeu {
+    # Haengt an, was seit dem letzten Aufruf in $ergebnisse dazugekommen ist.
+    param([string]$Datei)
+    if (-not $script:teilprotokollAktiv) { return }
+    if ($ergebnisse.Count -le $script:teilprotokollZeilen) { return }
+    try {
+        $t = New-Object System.Text.StringBuilder
+        for ($i = $script:teilprotokollZeilen; $i -lt $ergebnisse.Count; $i++) {
+            $r = $ergebnisse[$i]
+            [void]$t.AppendLine("| $($r.Status) | $($r.Alt) | $($r.Neu) | $($r.Grund) |")
+        }
+        [System.IO.File]::AppendAllText($Datei, $t.ToString(), (New-Object System.Text.UTF8Encoding $false))
+        $script:teilprotokollZeilen = $ergebnisse.Count
+    } catch { }
+}
+
 # --- Hilfsfunktion: Unterordner aus Datums-Praefix (yyyyMMdd_HHmmss) ----------
 function Get-Unterordner {
     param([string]$DatumPraefix, [string]$Schema)
@@ -383,6 +477,7 @@ if (-not (Test-Path -LiteralPath $Protokolle -PathType Container)) {
     New-Item -ItemType Directory -Path $Protokolle -Force | Out-Null
 }
 
+$protokollDatei = Join-Path $Protokolle "protokoll_$protokollStempel.md"
 $ergebnisse    = New-Object System.Collections.Generic.List[object]
 $geplanteZiele = New-Object System.Collections.Generic.HashSet[string]
 # Zu jedem belegten Zielnamen die Quelldatei, die ihn belegt hat. Ohne diese
@@ -409,6 +504,7 @@ if ($Reorganisieren) {
     # Dateinamen ab, ein Umsortieren wuerde die Ereignisse stillschweigend aufloesen.
     $ereignisPfad = Join-Path $Mediathek $EreignisOrdnerName
     Write-Host "Schritt 1 von 2: Mediathek durchsehen. Bei vielen Dateien dauert das." -ForegroundColor Gray
+    Write-Laufstatus -Phase "metadaten" -Erzwingen
     $uhrMetadaten.Start()
     $dateien = @(Get-ChildItem -LiteralPath $Mediathek -File -Recurse |
                Where-Object {
@@ -424,12 +520,19 @@ if ($Reorganisieren) {
     if ($gesamtZuTun -gt 0) {
         if ($WhatIfPreference) { Write-Host "Schritt 2 von 2: Vorschau erstellen." -ForegroundColor Gray }
         else                   { Write-Host "Schritt 2 von 2: umsortieren." -ForegroundColor Gray }
+        Start-Teilprotokoll -Datei $protokollDatei -Titel $modusText -Kopfzeilen @(
+            "- **Start:** $($start.ToString('yyyy-MM-dd HH:mm:ss'))",
+            "- **Programmversion:** $Programmversion",
+            "- **Mediathek:** ``$Mediathek``",
+            "- **Gruppierung:** $Gruppierung")
     }
 
     $uhrEinsortieren.Start()
     $nummer = 0
     foreach ($f in $dateien) {
         $nummer++
+        Write-TeilprotokollNeu -Datei $protokollDatei
+        Write-Laufstatus -Phase "einsortieren" -Nummer $nummer -Gesamt $gesamtZuTun -Datei $f.Name -Erzwingen:($nummer -eq 1)
         # Innerhalb der Mediathek bleibt alles auf demselben Laufwerk; hier zaehlt
         # die Anzahl, nicht die Datenmenge.
         if (-not $WhatIfPreference) {
@@ -519,6 +622,7 @@ if ($Reorganisieren) {
     # Diese Phase ist der stumme Teil des Laufs: Bei vielen Dateien vergehen hier
     # Sekunden bis Minuten, ohne dass etwas auf dem Bildschirm passiert.
     Write-Host "Schritt 1 von 2: Metadaten lesen. ExifTool geht den Inbox-Ordner durch, das kann dauern." -ForegroundColor Gray
+    Write-Laufstatus -Phase "metadaten" -Erzwingen
     $uhrMetadaten.Start()
     $rohJson = & $ExifToolPath @exifArgs 2>$null
     $uhrMetadaten.Stop()
@@ -578,6 +682,12 @@ if ($Reorganisieren) {
         if ($gesamtZuTun -gt 0) {
             if ($WhatIfPreference) { Write-Host "Schritt 2 von 2: Vorschau erstellen." -ForegroundColor Gray }
             else                   { Write-Host "Schritt 2 von 2: einsortieren." -ForegroundColor Gray }
+            Start-Teilprotokoll -Datei $protokollDatei -Titel $modusText -Kopfzeilen @(
+                "- **Start:** $($start.ToString('yyyy-MM-dd HH:mm:ss'))",
+                "- **Programmversion:** $Programmversion",
+                "- **Mediathek:** ``$Mediathek``",
+                "- **Inbox:** ``$Inbox``",
+                "- **Gruppierung:** $Gruppierung")
         }
 
         $uhrEinsortieren.Start()
@@ -585,6 +695,8 @@ if ($Reorganisieren) {
         foreach ($e in $zuTun) {
             $nummer++
             $dateiName   = $e.FileName
+            Write-TeilprotokollNeu -Datei $protokollDatei
+            Write-Laufstatus -Phase "einsortieren" -Nummer $nummer -Gesamt $gesamtZuTun -Bytes $erledigtBytes -GesamtBytes $summeBytes -Datei $dateiName -Erzwingen:($nummer -eq 1)
             $quellOrdner = ($e.Directory -replace '/','\').TrimEnd('\')
             $quelle      = Join-Path $quellOrdner $dateiName
 
@@ -728,7 +840,6 @@ if ($Reorganisieren) {
 # Bei -WhatIf wirkt $WhatIfPreference automatisch auf Set-Content, es entsteht
 # also bewusst kein Protokoll.
 $ende = Get-Date
-$stempel = $start.ToString("yyyyMMdd_HHmmss")
 $modusSuffix = if ($WhatIfPreference) { " (VORSCHAU / -WhatIf, nichts geändert)" } else { "" }
 
 $md = New-Object System.Text.StringBuilder
@@ -793,8 +904,10 @@ if ($ergebnisse.Count -gt 0) {
     [void]$md.AppendLine("_Keine passenden Dateien verarbeitet._")
 }
 
-$protokollDatei = Join-Path $Protokolle "protokoll_$stempel.md"
+# Ueberschreibt die mitgeschriebene Fassung (siehe Start-Teilprotokoll) durch das
+# vollstaendige Protokoll.
 $md.ToString() | Set-Content -LiteralPath $protokollDatei -Encoding UTF8
+Write-Laufstatus -Phase "fertig" -Nummer $ergebnisse.Count -Gesamt $ergebnisse.Count -Erzwingen
 
 # --- Zusammenfassung ---------------------------------------------------------
 Write-Host ""

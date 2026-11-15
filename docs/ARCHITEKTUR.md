@@ -205,6 +205,9 @@ denselben Zielnamen zeigen.
 automatisch auch auf das abschließende `Set-Content`, deshalb entsteht bei einer Vorschau
 kein Protokoll – das ist gewollt, nicht vergessen. Neue schreibende Aktionen müssen entweder
 in einen `ShouldProcess`-Block oder ein Cmdlet nutzen, das ShouldProcess selbst unterstützt.
+**Schreiben über `System.IO` umgeht `-WhatIf` vollständig.** Wer so schreibt, prüft
+`$WhatIfPreference` selbst, wie `Start-Teilprotokoll` es tut. Bewusst ohne diese Prüfung
+schreibt nur `Write-Laufstatus`, weil die Vorschau der Oberfläche ihren Fortschritt braucht.
 
 Was eine Vorschau **nicht** zeigt: `OK`-Einträge entstehen erst innerhalb von
 `ShouldProcess`, also nur im echten Lauf. Eine Vorschau meldet deshalb immer
@@ -218,7 +221,14 @@ Protokollpfad, obwohl an dieser Stelle keine Datei entsteht. Und das unterdrück
 Dateibewegung ist und beim Auswerten herausfallen muss.
 
 **Fehlerbehandlung.** Fehlt ExifTool oder der Inbox-Ordner, bricht das Skript mit `exit 1`
-ab. Ein Fehler an einer einzelnen Datei wird gefangen, als `FEHLER` protokolliert und der
+ab. Dasselbe gilt, wenn `-Ereignis` oder `-EreignisOrdnerName` nicht als Ordnername taugt
+(`Test-OrdnernameErlaubt`: keine der Zeichen `\ / : * ? " < > |`, kein Punkt oder
+Leerzeichen am Ende, keine reservierten Gerätenamen). Vorher endete etwa „Urlaub: Italien"
+in einer rohen `DriveNotFoundException` aus `Join-Path` (Betatest R-14). Die Meldung steht in
+einer Zeile und beginnt mit `FEHLER:`, damit die Oberfläche sie als Abbruchgrund zeigt. Der
+Dienst trägt eine Kopie derselben Funktion und lehnt einen solchen Zweignamen schon beim
+Speichern ab; die Kopie ist gewollt, die Skripte bleiben voneinander unabhängig. Wer die
+Regel ändert, ändert beide. Ein Fehler an einer einzelnen Datei wird gefangen, als `FEHLER` protokolliert und der
 Lauf geht weiter – ein defektes Bild darf den Rest nicht stoppen.
 
 ## Ergebnisse, Fortschritt und Zeiten
@@ -247,6 +257,23 @@ Windows PowerShell 5.1 kostet jeder Aufruf spürbar Zeit) und am Ende mit `-Comp
 abgeräumt. Bewusst `Write-Progress` und keine zusätzliche Zeile auf stdout: Der
 Progress-Stream erreicht `Read-SkriptAusgabe` im Dienst nicht. Bei `-WhatIf` entfällt die
 Anzeige, die Vorschau verschiebt ja nichts.
+
+**Statusdatei.** Für die Weboberfläche schreibt der Motor seinen Stand zusätzlich als JSON in
+die Datei aus `-StatusDatei` (`Write-Laufstatus`): `phase` (`metadaten`, `einsortieren`,
+`fertig`), `nummer`, `gesamt`, `bytes`, `gesamtBytes`, `datei`. Gedrosselt auf 500 ms, die
+Phasenwechsel und die erste Datei mit `-Erzwingen`. Ohne den Parameter tut die Funktion
+nichts, der Doppelklick-Betrieb merkt davon nichts. Geschrieben wird über `System.IO`, damit
+die Datei auch bei `-WhatIf` entsteht – sie ist kein Ergebnis des Laufs. Ein Schreibfehler
+wird geschluckt und darf den Lauf nie stoppen.
+
+**Das Protokoll wird mitgeschrieben** (Betatest R-04). Wurde das Fenster während des Laufs
+geschlossen, gab es vorher gar kein Protokoll. Jetzt legt `Start-Teilprotokoll` die Datei zu
+Beginn von Schritt 2 mit Kopf und dem Vermerk „nicht abgeschlossen" an, und
+`Write-TeilprotokollNeu` hängt vor jeder Datei an, was seither in `$ergebnisse`
+dazugekommen ist. Am Ende überschreibt das vollständige Protokoll diese Fassung unter
+demselben Namen (`$protokollDatei` wird dafür schon vor den Modi festgelegt). Beide
+Funktionen schreiben über `System.IO` und schließen `-WhatIf` deshalb selbst aus – siehe
+die Falle bei `-WhatIf` unten.
 
 **Neue Ausgabezeilen müssen gegen `Read-SkriptAusgabe` geprüft werden.** Die Funktion im
 Dienst prüft jede Zeile gegen feste Muster. `OK`/`SKIP`/`FEHLER` sind mit `^` und `$`
@@ -306,8 +333,37 @@ verliert nichts am Import; der Doppelklick-Betrieb hängt nicht an ihnen.
 
 **Der Motor läuft als eigener Prozess**, nicht dot-sourced und nicht im selben Runspace. Das
 Importskript beendet sich bei fehlendem ExifTool mit `exit 1`, und das würde den Dienst
-mitreißen. `Invoke-Importskript` startet deshalb `powershell.exe` und liest dessen Ausgabe.
-Der Exit-Code kommt sauber zurück, der Dienst überlebt (geprüft).
+mitreißen. `Start-Importlauf` startet deshalb `powershell.exe` als eigenen Prozess. Der
+Exit-Code kommt sauber zurück, der Dienst überlebt (geprüft).
+
+**Der Lauf läuft im Hintergrund.** Bis 1.3.0 wartete der Dienst auf das Ende des Laufs und
+konnte währenddessen keine weitere Anfrage beantworten; die Seite zeigte nur „Import läuft …".
+Jetzt starten `/api/vorschau` und `/api/import` den Motor nur und antworten sofort
+(`gestartet`). Der Prozess steckt in `$script:Lauf`; ein zweiter Start wird mit 409
+abgewiesen, solange `Test-LaufAktiv` gilt. Der Dienst übergibt dem Motor `-StatusDatei` mit
+einer Datei im Temp-Ordner, deren Name das Sitzungstoken trägt. `Get-Laufstand`, aufgerufen
+über `/api/laufstatus`, liest daraus den Fortschritt; ein halb geschriebener Stand ist kein
+Fehler, dann gilt der zuletzt lesbare weiter. Ist der Prozess beendet, wertet dieselbe
+Funktion die Ausgabe mit `Read-SkriptAusgabe` aus, legt das Ergebnis in `$script:Lauf` ab und
+löscht die Statusdatei. Die Seite fragt also so lange nach, bis `laeuft` falsch ist und
+`ergebnis` gefüllt.
+
+Auf der Seite erledigt das `warteAufLauf` im Takt von 700 ms; `zeigeFortschritt` füllt den
+Kasten `fortschritt` direkt unter dem Held: Schritt, Balken (`fortBalken`), in `laufstatus`
+„Datei n von m", Datenmenge und Restzeit. In Schritt 1 gibt es keine Zahl, der Balken läuft
+dort unbestimmt. Der Balken folgt beim Import den Bytes, weil über eine Laufwerksgrenze die
+Datenmenge die Dauer bestimmt; in der Vorschau zählt der Motor keine Bytes, dort gilt die
+Dateizahl. Die Restzeit rechnet aus dem Tempo seit Beginn von Schritt 2 und erscheint erst
+nach vier Sekunden, vorher misst man nur Anlaufzeit. Fünf gescheiterte Abfragen in Folge
+gelten als verlorener Dienst.
+
+Beim Laden fragt `nimmLaufAuf` einmal nach. Läuft ein Lauf, sperrt die Seite die Knöpfe und
+begleitet ihn bis zum Ergebnis; ohne das zeigte sie freie Knöpfe, die nur 409 ernten (geprüft,
+auch das Neuladen mitten im Import). Ist ein Import fertig, den diese Seite noch nicht gezeigt
+hat, erscheint sein Ergebnis; gemerkt wird dafür der Protokollname in `sessionStorage`. Eine
+fertige Vorschau wird nicht wieder aufgenommen: Nach dem Neuladen stehen die Optionen auf
+Anfang, und der Riegel `vorschauGesehen` darf nicht an einer Vorschau mit anderen Optionen
+hängen.
 
 **Parametername und Wert müssen getrennt übergeben werden.** Ein Name in Anführungszeichen
 ist für PowerShell kein Parameter, sondern ein Wert: `& skript.ps1 '-Inbox' 'C:\x'` bindet
@@ -319,16 +375,18 @@ Standardpfade zurück – also auf die echte Inbox und die echte Mediathek. Gena
 2026-09-23 ein ungewollter echter Lauf gegen den Produktivordner. Wer an der Argumentübergabe
 arbeitet, prüft zuerst im Protokoll, welche Pfade tatsächlich benutzt wurden.
 
-**stderr nebenher lesen.** Erst `StandardOutput.ReadToEnd()` und danach stderr blockiert den
-Kindprozess, sobald dessen stderr-Puffer voll läuft. Der Dienst startet deshalb
-`StandardError.ReadToEndAsync()`, bevor er stdout liest.
+**Beide Ströme nebenher lesen.** Bleibt stdout oder stderr ungelesen, blockiert der
+Kindprozess, sobald dessen Puffer voll läuft. `Start-Importlauf` startet deshalb für beide
+sofort `ReadToEndAsync()`; die Ergebnisse holt `Get-Laufstand` erst nach dem Prozessende ab.
 
 **Keine `Get-Content`-Ergebnisse in eine JSON-Antwort.** `Get-Content` hängt an jeden String
 die Provider-Eigenschaften `PSPath`, `PSParentPath`, `PSChildName`, `PSDrive`, `PSProvider`
 und `ReadCount`. `ConvertTo-Json` steigt in diesen Objektgraph ab und blieb im
 Dienst-Runspace stehen, ohne Fehler und ohne Rückkehr – die Anfrage lief einfach in den
 Timeout. Dateien werden deshalb mit `[System.IO.File]::ReadAllText()` gelesen, und die
-Antwort nutzt `-Depth 4` statt 8. Das ist dieselbe Linie wie bei `Test-GleicheDatei`: rein
+Antwort nutzt `-Depth 4` statt 8. Nur `/api/laufstatus` braucht mehr (`-Tiefe 7`), weil
+Fortschritt und Ergebnis dort zwei Ebenen tiefer stecken; was dort hineinkommt, stammt
+ausschließlich aus `ConvertFrom-Json` und eigenen `pscustomobject`. Das ist dieselbe Linie wie bei `Test-GleicheDatei`: rein
 lesende Zugriffe über `System.IO`, nicht über die Provider-Cmdlets.
 
 **Die Vorschau entsteht aus den `WhatIf:`-Zeilen**, wie im Abschnitt zu `-WhatIf` gefordert.
@@ -361,12 +419,11 @@ liegen geblieben waren. Wer den Filter im Motor ändert, ändert ihn hier mit, s
 Lageband und Vorschau voneinander ab.
 
 **Die Seite holt die Lage beim Zurückwechseln neu** (`visibilitychange`), nicht über einen
-Timer: Der Dienst bedient eine Anfrage nach der anderen, und ein Sekundentakt läge einem
-laufenden Import im Weg. Während eines Laufs ist der Vorschauknopf gesperrt; daran erkennt
-die Seite, dass sie gerade nichts abfragen soll.
+Timer: Der Dienst bedient eine Anfrage nach der anderen, und während eines Laufs fragt die
+Seite ohnehin schon nach dessen Stand. Ob gerade ein Lauf läuft, steht in `laufAktiv`.
 
-**Daneben steht ein Knopf, der dasselbe auf Zuruf tut** (`knopfAktualisieren`, links neben
-„Vorschau"). Der Wechsel ins Fenster deckt nur einen Teil der Fälle ab: Wer die Seite gar
+**Daneben steht ein Knopf, der dasselbe auf Zuruf tut** (`knopfAktualisieren`, rechts neben
+„Jetzt einsortieren"). Der Wechsel ins Fenster deckt nur einen Teil der Fälle ab: Wer die Seite gar
 nicht verlässt und nebenher Dateien in die Inbox schiebt, hatte sonst nur F5 – und das wirft
 Vorschau und Ergebnistabelle mit weg (R-20). Der Knopf ist aus demselben Grund wie der
 Vorschauknopf während eines Laufs gesperrt und dreht sein Symbol, solange die Anfrage läuft.
@@ -398,16 +455,44 @@ statt nichts zu importieren – wer alle Haken entfernt, meint aber das Gegentei
 sitzt in `Set-EinstellungenObjekt` und zusätzlich in der Seite, damit der Knopf gar nicht
 erst aktiv ist.
 
-**Der Aufbau der Seite.** Oben ein Lageband: ein Satz zur Lage, darunter die drei Kennzahlen,
-rechts die beiden Lauf-Knöpfe. Sie sitzen bewusst dort und nicht mehr im Import-Reiter — der
-Riegel bleibt derselbe, `knopfImport` wird erst nach einer Vorschau scharf
-(`vorschauGesehen`). Alle Element-Kennungen haben die Umgestaltung unverändert überlebt; wer
-am Skriptteil arbeitet, kann sich weiter auf `lage`, `lagehinweis`, `knopfVorschau`,
-`knopfImport`, `laufstatus` und `ortMediathek` verlassen. Symbole stecken als Inline-SVG in
-der Seite, weil sie nichts von außen nachlädt. Der Hell/Dunkel-Knopf stempelt `data-theme` auf
-`<html>` und merkt sich die Wahl in `localStorage`; ohne gespeicherte Wahl gilt weiter die
-Systemeinstellung, und jede Farbe steht als Marke in `:root`, damit beide Fassungen dieselben
-Regeln benutzen.
+**Der Aufbau der Seite** folgt seit 2.0 dem Entwurf „Album" (Spezifikation
+`docs\superpowers\specs\2026-11-15-oberflaeche-2-0-design.md`, nur lokal). Von oben: Kopf mit
+Bildzeichen, Reitern als Pillen und Hell/Dunkel-Knopf; der Held mit großer Überschrift je
+Lage, den Lauf-Knöpfen, „Inbox öffnen"/„Mediathek öffnen", den Zahlen (`lage`) und Pfaden und
+rechts der Bühne, auf der gezeichnete Fotos von der Inbox in die Mediathek fliegen; darunter
+der Fortschritt, die drei Schritte (Ablegen, Ansehen, Einsortieren), die zugeklappten
+Optionen für diesen Lauf und das Ergebnis. Held, Schritte und Knöpfe werden nur aus dem
+Objekt `zustand` gezeichnet (`zeigeZustand`, Phasen `bereit`, `vorschau`, `laeuft`,
+`fertig`), nie an Ort und Stelle – wer einen neuen Zustand braucht, ergänzt ihn dort. Die
+Bühne läuft nur, wenn etwas wartet oder ein Lauf läuft (sonst Klasse `ruht`), bei
+`prefers-reduced-motion` gar nicht, und verschwindet unter 720 px Breite.
+
+Der Riegel ist derselbe geblieben: `knopfImport` wird erst nach einer Vorschau mit mindestens
+einer Bewegung scharf (`vorschauGesehen`), jede Änderung an den Optionen macht ihn wieder
+ungültig (`entwerte`). Hervorgehoben (`gross`) ist immer der nächste sinnvolle Knopf. Die
+Rückfrage vor dem echten Lauf ist ein `<dialog>` in der Seite (`frageNach`) und nennt die Zahl
+der Dateien; `confirm()` gibt es nicht mehr. Der Ereignisname wird beim Tippen mit derselben
+Regel wie im Motor geprüft (`ordnernameFehler`); ein unzulässiger Name sperrt die Vorschau
+und klappt die Optionen auf. Dieselbe Prüfung sperrt in den Einstellungen das Speichern eines
+unzulässigen Zweignamens.
+
+**Vorschau und Ergebnis zeigen Bildkarten**, gruppiert nach Zielordner (`kartenGruppen`):
+„September 2026", „10. September 2026", „Jahr 2026" oder „Ereignis: Urlaub Italien" je nach
+Schema, Ereignisse zuletzt. Je Gruppe stehen zunächst 24 Karten, der Rest auf Knopfdruck.
+Das Bild kommt über `/api/vorschaubild` mit `loading="lazy"` und dem Token in `?t=`, weil ein
+`<img>` keinen Kopf schicken kann; fehlt es, steht ein gezeichnetes Foto- oder Videosymbol
+nach Endung da. Was liegen bleibt, steht wie bisher als Tabelle darunter; nach einem Lauf
+zusätzlich alle Einträge zugeklappt als Tabelle.
+
+Behalten haben ihre Kennung `lage`, `lagehinweis`, `knopfVorschau`, `knopfImport`,
+`laufstatus`, `ortMediathek`, `knopfAktualisieren`, `knopfThema` und die drei `reiter-…`;
+neu sind unter anderem `fortschritt`, `fortBalken`, `rueckfrage`, `knopfInboxOeffnen` und
+`knopfMediathekOeffnen`. Symbole stecken als Inline-SVG in der Seite, weil sie nichts von
+außen nachlädt. Der Hell/Dunkel-Knopf stempelt `data-theme` auf `<html>` und merkt sich die
+Wahl in `localStorage`; ohne gespeicherte Wahl gilt weiter die Systemeinstellung, und jede
+Farbe steht als Marke in `:root`, damit beide Fassungen dieselben Regeln benutzen. Die alten
+Markennamen (`--stempel` …) tragen jetzt die warmen Farben, damit Einstellungen, Tabellen und
+Protokoll-Leser ohne eigene Regeln mitziehen.
 
 Vor jedem Überschreiben legt der Dienst `einstellungen.json.bak` an. Die Sicherung steht nicht
 unter Versionskontrolle und ist damit die Rücknahme zwischen zwei Commits. `ConvertTo-Json`
@@ -421,14 +506,31 @@ Die API, alles tokenpflichtig außer `/`:
 | `GET /` | die Seite |
 | `GET /api/lage` | Zählungen für Inbox und Mediathek, ExifTool vorhanden |
 | `GET/POST /api/einstellungen` | `config\einstellungen.json` lesen und schreiben |
-| `POST /api/vorschau` | Motor mit `-WhatIf`, liefert die geplanten Bewegungen |
-| `POST /api/import` | echter Lauf, liefert Zusammenfassung und Protokollinhalt |
+| `POST /api/vorschau` | startet den Motor mit `-WhatIf` im Hintergrund |
+| `POST /api/import` | startet den echten Lauf im Hintergrund |
+| `GET /api/laufstatus` | Fortschritt des laufenden Laufs, danach sein Ergebnis (Vorschau: geplante Bewegungen; Import: Zusammenfassung und Protokollname) |
+| `GET /api/vorschaubild?wurzel=&pfad=` | verkleinertes JPEG einer Datei aus Inbox oder Mediathek |
+| `POST /api/oeffne` | öffnet Inbox, Mediathek oder Protokolle im Explorer |
 | `GET /api/protokolle` | die letzten 50 Protokolle |
 | `GET /api/protokoll?name=` | ein Protokoll im Volltext |
 
 Der Dienst bedient eine Anfrage nach der anderen. Das reicht für eine Oberfläche mit einem
-Benutzer und hält den Code klein; ein Import blockiert währenddessen die Seite, was richtig
-ist, weil zwei gleichzeitige Läufe auf derselben Inbox nichts Gutes ergäben.
+Benutzer und hält den Code klein. Weil der Lauf selbst im Hintergrund steckt, bleibt der
+Dienst währenddessen ansprechbar; zwei gleichzeitige Läufe verhindert die 409-Sperre, denn
+auf derselben Inbox ergäben sie nichts Gutes.
+
+**Vorschaubilder kommen aus der Windows-Shell** (`IShellItemImageFactory`, per `Add-Type`
+übersetzt), also aus derselben Quelle wie im Explorer: JPG, PNG und Videos immer, HEIC und
+RAW je nach installierten Codecs. Unter 5.1 gemessen 15 bis 30 ms je Datei nach dem ersten
+Aufruf. Unter PowerShell 7 scheitert das Übersetzen an `System.Drawing`; dann gibt es keine
+Vorschaubilder, der Dienst meldet das beim Start und läuft weiter. Die Seite bekommt dafür je
+Aktion `wurzel` (`inbox`/`mediathek`) und einen relativen `quelle`-Pfad
+(`Get-RelativZurWurzel`), nie einen vollen Pfad. Der Endpunkt prüft mit
+`Test-LiegtInnerhalb`, dass der zusammengesetzte Pfad in der Wurzel bleibt, und gibt nur das
+verkleinerte Bild heraus, nie die Originaldatei.
+
+**`/api/oeffne` nimmt keinen Pfad an**, nur einen der drei Namen `inbox`, `mediathek`,
+`protokolle`. Aus der Anfrage gelangt so nie ein beliebiger Pfad an `explorer.exe`.
 
 ## Installationsprogramm
 
@@ -591,10 +693,15 @@ einem eigenen `--user-data-dir` genügt. Über die WebSocket-Adresse aus
 `knopfImport`, `reiter-einstellungen` …) und `Page.captureScreenshot` schicken; eine
 Browser-Erweiterung braucht es dafür nicht.
 
-Die Falle dabei: Die Seite fragt vor dem echten Lauf mit `confirm()` nach. In headless Chrome
-blockiert dieser Dialog den Renderer, und jede weitere Antwort des Protokolls bleibt aus – der
-Test hängt ohne Fehlermeldung. Vor dem Klick `window.confirm = function(){ return true; }`
-setzen; der Fragetext lässt sich dabei in einer Variablen mitlesen und prüfen.
+Die Rückfrage vor dem echten Lauf ist ein `<dialog>` in der Seite und lässt sich deshalb
+fernsteuern: nach dem Klick auf `knopfImport` den Knopf `rueckfrageJa` (oder `rueckfrageNein`)
+klicken, der Text steht in `rueckfrageText`. Bis 1.3.0 war es ein `confirm()`, der in headless
+Chrome den Renderer blockierte.
+
+Für die Bildkarten echte Bilder nehmen, etwa JPG-Dateien aus `C:\Windows\Web`, in die
+Test-Inbox kopiert; eine 1-Byte-Datei `.jpg` daneben prüft das Ersatzsymbol. Die Bilder laden
+mit `loading="lazy"` erst beim Scrollen. Wer zählen will, wie viele geladen sind, scrollt die
+Seite vorher durch, sonst stehen auf einer ganzseitigen Aufnahme leere Karten.
 
 Auch hier gilt die Regel aus `CLAUDE.md`: den Dienst mit eigenen `-Inbox`/`-Mediathek`/
 `-Protokolle` und eigener `-EinstellungsDatei` gegen Wegwerf-Ordner starten, nie gegen die echte
