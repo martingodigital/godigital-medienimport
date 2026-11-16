@@ -38,11 +38,11 @@ inbox\Italien\DJI_0042.MP4  →  mediathek\Ereignisse\Italien\20260912_164500_DJ
 
 Das Aufnahmedatum kommt aus den Metadaten der Datei, nicht aus dem Dateidatum.
 Bedient wird alles über eine Oberfläche im Browser, die nur auf dem eigenen
-Rechner läuft. Vor jedem Import lässt sich eine Vorschau ansehen; überschrieben
-wird nie etwas.
+Rechner läuft. Vor jedem Import zeigt eine Vorschau die eigenen Aufnahmen als
+Bildkarten, mit dem Ordner, in den sie kommen; überschrieben wird nie etwas.
 
-![Die Weboberfläche mit Lageband, Kennzahlen und den Einstellungen für den
-nächsten Lauf](docs/weboberflaeche.png)
+![Die Weboberfläche nach einer Vorschau: oben die Lage mit den Knöpfen, darunter die
+drei Schritte und die Aufnahmen als Bildkarten](docs/weboberflaeche.png)
 
 ## Anleitung
 

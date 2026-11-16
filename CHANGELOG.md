@@ -3,6 +3,34 @@
 Die Versionsnummer steht in `VERSION`; diese Datei sagt, was dahintersteckt.
 Ein Tag `v<Version>` löst den Bau des Setups aus.
 
+## 2.0.0 – 2026-11-16
+
+Die Weboberfläche ist neu gestaltet. Dazu kommen fünf Rückmeldungen aus dem Betatest
+(R-03, R-04, R-11, R-14, R-17) und der Wunsch nach einer Oberfläche, die fertig wirkt
+(R-05.1).
+
+- Neues Aussehen: hell und warm, mit großer Überschrift, die sagt, was ansteht, drei
+  Schritten (Ablegen, Ansehen, Einsortieren) und einer kleinen Animation, solange etwas
+  zu tun ist. Die dunkle Fassung zieht mit.
+- Vorschau und Ergebnis zeigen die eigenen Aufnahmen als Bildkarten mit Vorschaubild,
+  gruppiert nach dem Ordner, in den sie kommen. Die Bilder liefert Windows, genau wie im
+  Explorer; wo Windows keines erzeugen kann, steht ein gezeichnetes Symbol.
+- Während Vorschau und Import zeigt die Seite einen Balken mit „Datei n von m", der
+  bewegten Datenmenge und der geschätzten Restzeit. Bisher stand dort nur „Import
+  läuft …". Wird die Seite währenddessen neu geladen, zeigt sie den Lauf weiter.
+- Die Rückfrage vor dem echten Lauf erscheint in der Seite und nennt die Zahl der
+  Aufnahmen, statt als Browser-Dialog.
+- Knöpfe öffnen Inbox, Mediathek und Protokollordner im Explorer.
+- Ein Ereignisname mit einem Zeichen, das Windows in Ordnernamen nicht erlaubt, wird
+  beim Tippen gemeldet. Das Programm selbst bricht in diesem Fall jetzt mit einer
+  verständlichen Meldung ab, bevor es etwas anfasst; bisher endete der Lauf in einer
+  PowerShell-Fehlermeldung.
+- Das Protokoll wird während des Laufs mitgeschrieben. Wird das Fenster mitten im Import
+  geschlossen, bleibt ein Protokoll mit dem Vermerk „nicht abgeschlossen" zurück, in dem
+  steht, was bis dahin geschah. Bisher gab es dann gar keins.
+- Die Optionen für einen einzelnen Lauf sind zugeklappt; der Schalter zum Umsortieren
+  der Mediathek liegt jetzt dort.
+
 ## 1.3.0 – 2026-10-17
 
 Zwei Rückmeldungen aus dem Betatest (R-19, R-20).
