@@ -219,7 +219,7 @@ im genannten Abschnitt.
   ```bash
   chrome.exe --headless=new --disable-gpu --no-pdf-header-footer \
     --print-to-pdf="GoDigital-Medienimport_Anleitung-bebildert.pdf" \
-    "file:///E:/GoDigital Medienimport/docs/GoDigital-Medienimport_Anleitung-bebildert.html"
+    "file:///E:/ClaudeCode/07 Medien/GoDigital Medienimport/docs/GoDigital-Medienimport_Anleitung-bebildert.html"
   ```
 
   Danach das PDF seitenweise rendern und ansehen (`pypdfium2`), sonst fallen abgeschnittene

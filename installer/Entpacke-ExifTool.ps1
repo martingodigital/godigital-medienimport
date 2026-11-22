@@ -39,7 +39,13 @@ try {
     New-Item -ItemType Directory -Path $temp -Force | Out-Null
 
     try {
-        Expand-Archive -LiteralPath $Archiv -DestinationPath $temp -Force
+        # Bewusst nicht Expand-Archive: Erbt powershell.exe (5.1) den Modulpfad von
+        # PowerShell 7 - etwa wenn das Setup aus einem pwsh-Fenster gestartet wird -,
+        # laedt es das neuere Archiv-Modul, und das scheitert unter .NET Framework mit
+        # "keine Ueberladung fuer ExtractToDirectory". Die .NET-Methode braucht kein
+        # Modul und verhaelt sich unter 5.1 und 7 gleich (geprueft).
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($Archiv, $temp)
 
         $exe = Get-ChildItem -LiteralPath $temp -Recurse -File |
                Where-Object { $_.Name -eq 'exiftool(-k).exe' -or $_.Name -eq 'exiftool.exe' } |

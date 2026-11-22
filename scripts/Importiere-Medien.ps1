@@ -554,6 +554,9 @@ if ($Reorganisieren) {
                 Write-Host "OK '$($f.Name)' -> '$unter'" -ForegroundColor Green
                 $ergebnisse.Add([pscustomobject]@{Status="OK"; Alt=$f.Name; Neu=(Join-Path $unter $f.Name); Grund=""})
                 $verschoben++
+                # Sofort nachtragen: Endet der Lauf vor der naechsten Datei, fehlte
+                # sonst genau diese im Protokoll, obwohl sie schon verschoben ist.
+                Write-TeilprotokollNeu -Datei $protokollDatei
                 $erledigtBytes += [long]$f.Length
             } catch {
                 Write-Host "FEHLER '$($f.Name)': $($_.Exception.Message)" -ForegroundColor Red
@@ -814,6 +817,9 @@ if ($Reorganisieren) {
                     Write-Host $okZeile -ForegroundColor Green
                     $ergebnisse.Add([pscustomobject]@{Status="OK"; Alt=$dateiName; Neu=(Join-Path $unter $neuerName); Grund=$grund})
                     $verschoben++
+                    # Sofort nachtragen: Endet der Lauf vor der naechsten Datei, fehlte
+                    # sonst genau diese im Protokoll, obwohl sie schon verschoben ist.
+                    Write-TeilprotokollNeu -Datei $protokollDatei
                     if ($null -ne $e.FileSize) { $erledigtBytes += [long]$e.FileSize }
                 } catch {
                     Write-Host "FEHLER '$dateiName': $($_.Exception.Message)" -ForegroundColor Red

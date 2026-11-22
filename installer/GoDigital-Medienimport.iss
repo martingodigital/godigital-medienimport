@@ -402,9 +402,11 @@ begin
               ' -Archiv "' + FuerBefehlszeile(ArchivPfad) + '"' +
               ' -Ziel "' + FuerBefehlszeile(ExpandConstant('{app}\exiftool')) + '"';
     if (not Exec('powershell.exe', Befehl, '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
-      MsgBox('ExifTool ließ sich nicht entpacken (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
+      // SuppressibleMsgBox: Bei /SUPPRESSMSGBOXES (stille Installation) darf
+      // kein Fenster auf einen Klick warten; die Meldung steht dann im /LOG.
+      SuppressibleMsgBox('ExifTool ließ sich nicht entpacken (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
              'Das Programm ist installiert, findet aber kein ExifTool. Tragen Sie in den' + #13#10 +
-             'Einstellungen der Weboberfläche den Pfad zu einer exiftool.exe ein.', mbError, MB_OK);
+             'Einstellungen der Weboberfläche den Pfad zu einer exiftool.exe ein.', mbError, MB_OK, IDOK);
   end;
 
   // Rueckgabe 2 heisst: Es gab schon eine Einstellungsdatei, sie bleibt stehen.
@@ -422,8 +424,8 @@ begin
   if Code = 2 then
     EinstellungenBehalten := True
   else if Code <> 0 then
-    MsgBox('Die Einstellungsdatei ließ sich nicht schreiben (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
-           'Sie können die Ordner nach dem Start in der Weboberfläche eintragen.', mbError, MB_OK);
+    SuppressibleMsgBox('Die Einstellungsdatei ließ sich nicht schreiben (Rückgabe ' + IntToStr(Code) + ').' + #13#10#13#10 +
+           'Sie können die Ordner nach dem Start in der Weboberfläche eintragen.', mbError, MB_OK, IDOK);
 end;
 
 procedure CurPageChanged(CurPageID: Integer);

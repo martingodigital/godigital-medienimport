@@ -47,6 +47,28 @@ Lauf ab, bevor etwas veröffentlicht wird.
 
 ## Still installieren zum Prüfen
 
+**Ist das Programm auf dem Rechner schon installiert, zuerst sichern.** Wegen der
+gleichbleibenden `AppId` übernimmt die Probe den Eintrag in der App-Liste und die
+Startmenü-Verknüpfungen der vorhandenen Installation, ihre Deinstallation entfernt
+beides. Die vorhandene Installation selbst bleibt unberührt.
+
+```powershell
+$sicherung = "$env:TEMP\gdmi-sicherung"; New-Item -ItemType Directory -Force $sicherung | Out-Null
+reg export 'HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\{89A23525-B7D0-45C9-BA38-83D6BF357836}_is1' "$sicherung\eintrag.reg" /y
+Copy-Item -Recurse -Force "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GoDigital Medienimport" "$sicherung\Startmenue"
+```
+
+Nach dem Entfernen der Probe zurückspielen:
+
+```powershell
+reg import "$sicherung\eintrag.reg"
+$startmenue = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GoDigital Medienimport"
+New-Item -ItemType Directory -Force $startmenue | Out-Null
+Copy-Item "$sicherung\Startmenue\*" $startmenue -Force
+```
+
+Installieren:
+
 ```powershell
 & ".\installer\ausgabe\GoDigital-Medienimport-Setup-1.0.0.exe" /VERYSILENT /SUPPRESSMSGBOXES `
   "/DIR=$env:TEMP\gdmi-probe" /MERGETASKS=!desktopicon /LOG="$env:TEMP\gdmi-setup.log"

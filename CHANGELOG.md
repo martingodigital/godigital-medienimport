@@ -3,7 +3,7 @@
 Die Versionsnummer steht in `VERSION`; diese Datei sagt, was dahintersteckt.
 Ein Tag `v<Version>` löst den Bau des Setups aus.
 
-## 2.0.0 – 2026-11-16
+## 2.0.0 – 2026-11-22
 
 Die Weboberfläche ist neu gestaltet. Dazu kommen fünf Rückmeldungen aus dem Betatest
 (R-03, R-04, R-11, R-14, R-17) und der Wunsch nach einer Oberfläche, die fertig wirkt
@@ -30,6 +30,10 @@ Die Weboberfläche ist neu gestaltet. Dazu kommen fünf Rückmeldungen aus dem B
   steht, was bis dahin geschah. Bisher gab es dann gar keins.
 - Die Optionen für einen einzelnen Lauf sind zugeklappt; der Schalter zum Umsortieren
   der Mediathek liegt jetzt dort.
+- Das Setup entpackt ExifTool auch dann, wenn es aus einem PowerShell-7-Fenster
+  gestartet wird. Bisher endete die Installation in diesem Fall ohne ExifTool. Eine
+  stille Installation wartet außerdem nicht mehr auf einen Klick, wenn dabei etwas
+  schiefgeht.
 
 ## 1.3.0 – 2026-10-17
 

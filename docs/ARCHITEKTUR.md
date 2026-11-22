@@ -269,11 +269,17 @@ wird geschluckt und darf den Lauf nie stoppen.
 **Das Protokoll wird mitgeschrieben** (Betatest R-04). Wurde das Fenster während des Laufs
 geschlossen, gab es vorher gar kein Protokoll. Jetzt legt `Start-Teilprotokoll` die Datei zu
 Beginn von Schritt 2 mit Kopf und dem Vermerk „nicht abgeschlossen" an, und
-`Write-TeilprotokollNeu` hängt vor jeder Datei an, was seither in `$ergebnisse`
-dazugekommen ist. Am Ende überschreibt das vollständige Protokoll diese Fassung unter
-demselben Namen (`$protokollDatei` wird dafür schon vor den Modi festgelegt). Beide
-Funktionen schreiben über `System.IO` und schließen `-WhatIf` deshalb selbst aus – siehe
-die Falle bei `-WhatIf` unten.
+`Write-TeilprotokollNeu` hängt vor jeder Datei und gleich nach jedem erfolgreichen
+Verschieben an, was seither in `$ergebnisse` dazugekommen ist. Am Ende überschreibt das
+vollständige Protokoll diese Fassung unter demselben Namen (`$protokollDatei` wird dafür
+schon vor den Modi festgelegt). Beide Funktionen schreiben über `System.IO` und schließen
+`-WhatIf` deshalb selbst aus – siehe die Falle bei `-WhatIf` unten.
+
+Eine Grenze bleibt, geprüft mit vier hart beendeten Läufen über je 1.500 Dateien: Im
+Protokoll kann **höchstens eine** verschobene Datei fehlen. Windows benennt die Datei
+schon um, während `Move-Item` unter 5.1 noch nicht zurückgekehrt ist; endet der Prozess
+genau dazwischen, kann ihn nichts mehr protokollieren. Verloren geht dabei keine Datei –
+Inbox und Mediathek ergaben zusammen in jedem Versuch den vollen Bestand.
 
 **Neue Ausgabezeilen müssen gegen `Read-SkriptAusgabe` geprüft werden.** Die Funktion im
 Dienst prüft jede Zeile gegen feste Muster. `OK`/`SKIP`/`FEHLER` sind mit `^` und `$`
@@ -594,8 +600,24 @@ Import bliebe hängen. `Entpacke-ExifTool.ps1` sucht sie samt `exiftool_files` i
 Baum, statt einen Ordnernamen anzunehmen, und benennt beim Kopieren um. Fehlt `exiftool_files`,
 bricht es mit Code 1 und einer Begründung ab.
 
+**Entpackt wird mit `[System.IO.Compression.ZipFile]`, nicht mit `Expand-Archive`.** Wird das
+Setup aus einem PowerShell-7-Fenster gestartet, erbt das `powershell.exe` (5.1), das das
+Setup aufruft, den Modulpfad von PowerShell 7 und lädt dessen neueres Archiv-Modul. Das
+scheitert unter .NET Framework mit „keine Überladung für ExtractToDirectory“, und das Setup
+stand ohne ExifTool da (2026-11-16 gefunden, seitdem behoben und geprüft). Die
+.NET-Methode braucht kein Modul. Meldungen nach dem Installieren laufen über
+`SuppressibleMsgBox`; ein einfaches `MsgBox` wartete auch bei `/SUPPRESSMSGBOXES` auf
+einen Klick und hielt damit jede stille Installation an.
+
 **Die `AppId` `{{89A23525-B7D0-45C9-BA38-83D6BF357836}` bleibt für immer gleich.** Ändert sie
 sich, hält Windows ein Update für ein zweites Programm, und der Nutzer hat beides.
+
+Die Kehrseite trifft jede Probeinstallation auf einem Rechner, auf dem das Programm schon
+installiert ist: Auch mit `/DIR` in einen anderen Ordner übernimmt sie den Eintrag in der
+App-Liste und die Startmenü-Verknüpfungen der vorhandenen Installation, und ihre
+Deinstallation entfernt beides. Die vorhandene Installation läuft weiter, ist aber in
+Windows nicht mehr eingetragen. Vorher sichern und hinterher zurückspielen, wie in
+`installer\liesmich.md` beschrieben.
 
 **Eine vorhandene `einstellungen.json` bleibt unangetastet** (Rückgabe 2 des Schreibskripts).
 Die Schlussseite sagt es, sonst wunderte sich ein Nutzer, warum seine im Assistenten gewählten
